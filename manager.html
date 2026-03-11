@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RK Group - Manager Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        
+        .pulse-ring {
+            position: relative;
+        }
+        .pulse-ring::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: inherit;
+            border: 2px solid #ef4444;
+            animation: pulseRing 2s ease-out infinite;
+        }
+        @keyframes pulseRing {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        
+        .alert-card {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .status-live::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: livePulse 2s infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">RK</div>
+                    <div>
+                        <h1 class="font-bold text-slate-800 text-lg">Manager Dashboard</h1>
+                        <p class="text-xs text-slate-500">Real-time Monitoring System</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="status-live text-sm font-medium text-green-600 flex items-center">
+                        Live Monitoring
+                    </span>
+                    <div class="relative">
+                        <i class="fas fa-bell text-slate-600 text-xl cursor-pointer hover:text-blue-600 transition"></i>
+                        <span id="notificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+                    </div>
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Stats Row -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500 mb-1">Total Feedback Today</p>
+                        <p class="text-2xl font-bold text-slate-800" id="totalFeedback">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-comments text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500 mb-1">Urgent Issues</p>
+                        <p class="text-2xl font-bold text-slate-800" id="urgentCount">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500 mb-1">Pending Response</p>
+                        <p class="text-2xl font-bold text-slate-800" id="pendingCount">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500 mb-1">Avg Rating</p>
+                        <p class="text-2xl font-bold text-slate-800" id="avgRating">0.0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-star text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Alerts Feed -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i class="fas fa-bell text-red-500 mr-2"></i>
+                            Live Alerts
+                        </h2>
+                        <div class="flex space-x-2">
+                            <button onclick="filterAlerts('all')" class="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">All</button>
+                            <button onclick="filterAlerts('urgent')" class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">Urgent</button>
+                            <button onclick="filterAlerts('positive')" class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">Positive</button>
+                        </div>
+                    </div>
+                    <div id="alertsContainer" class="divide-y divide-slate-200 max-h-96 overflow-y-auto">
+                        <!-- Alerts will be inserted here -->
+                        <div class="p-8 text-center text-slate-400">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>No alerts yet. Waiting for customer feedback...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Response Templates -->
+                <div class="bg-white rounded-xl shadow-md mt-6 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Quick Response Templates</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button onclick="useTemplate('We apologize for the inconvenience. Our staff is on the way to resolve this issue immediately.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
+                            <i class="fas fa-running text-blue-500 mr-2"></i>
+                            Staff on the way
+                        </button>
+                        <button onclick="useTemplate('Thank you for your feedback. We are investigating this issue and will take appropriate action.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
+                            <i class="fas fa-search text-blue-500 mr-2"></i>
+                            Investigating
+                        </button>
+                        <button onclick="useTemplate('We sincerely apologize. A refund of ₹[AMOUNT] has been initiated and will be processed within 24 hours.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
+                            <i class="fas fa-undo text-blue-500 mr-2"></i>
+                            Refund initiated
+                        </button>
+                        <button onclick="useTemplate('Thank you for your appreciation! We look forward to serving you again.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
+                            <i class="fas fa-heart text-blue-500 mr-2"></i>
+                            Thank you
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Train Status -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Train Status</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-train text-green-600 mr-3"></i>
+                                <div>
+                                    <p class="font-medium text-slate-800 text-sm">12649 - YPR Express</p>
+                                    <p class="text-xs text-slate-500">Running On Time</p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold text-green-600">Active</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Today's Issues</h3>
+                    <canvas id="issuesChart" height="200"></canvas>
+                </div>
+
+                <!-- Performance -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Resolution Rate</h3>
+                    <div class="relative pt-1">
+                        <div class="flex mb-2 items-center justify-between">
+                            <div>
+                                <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">
+                                    Excellent
+                                </span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-semibold inline-block text-green-600">
+                                    94%
+                                </span>
+                            </div>
+                        </div>
+                        <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
+                            <div style="width:94%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"></div>
+                        </div>
+                        <p class="text-xs text-slate-500">Issues resolved before IRCTC escalation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Modal -->
+    <div id="responseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Respond to Customer</h3>
+            <div class="mb-4 p-3 bg-slate-50 rounded-lg">
+                <p class="text-sm text-slate-600 mb-1">Original Issue:</p>
+                <p class="text-sm font-medium text-slate-800" id="modalIssueText">Loading...</p>
+            </div>
+            <textarea id="responseText" rows="4" class="w-full border border-slate-300 rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Type your response..."></textarea>
+            <div class="flex space-x-3">
+                <button onclick="closeModal()" class="flex-1 py-3 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition">Cancel</button>
+                <button onclick="sendResponse()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">Send Response</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAlertId = null;
+        let alerts = [];
+        
+        // Initialize chart
+        const ctx = document.getElementById('issuesChart').getContext('2d');
+        const issuesChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Overcharging', 'Service', 'Food Quality', 'Others'],
+                datasets: [{
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['#ef4444', '#f97316', '#eab308', '#6b7280'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+            }
+        });
+
+        // Check for new feedback every 2 seconds
+        setInterval(checkNewFeedback, 2000);
+        
+        // Initial load
+        loadAllFeedback();
+
+        function checkNewFeedback() {
+            const newFeedback = localStorage.getItem('newFeedback');
+            if (newFeedback) {
+                const data = JSON.parse(newFeedback);
+                addAlert(data);
+                localStorage.removeItem('newFeedback');
+                updateStats();
+                playNotificationSound();
+            }
+        }
+
+        function loadAllFeedback() {
+            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            feedbacks.reverse().forEach(f => addAlert(f, false));
+            updateStats();
+        }
+
+        function addAlert(data, animate = true) {
+            const alertsContainer = document.getElementById('alertsContainer');
+            
+            // Remove "no alerts" message if present
+            if (alertsContainer.children.length === 1 && alertsContainer.children[0].querySelector('.fa-inbox')) {
+                alertsContainer.innerHTML = '';
+            }
+
+            const alertId = Date.now();
+            const isUrgent = data.rating <= 2 || data.issueType === 'overcharging';
+            const isPositive = data.rating >= 4;
+            
+            const alertCard = document.createElement('div');
+            alertCard.className = `alert-card p-4 border-l-4 ${isUrgent ? 'border-red-500 bg-red-50' : isPositive ? 'border-green-500 bg-green-50' : 'border-yellow-500 bg-yellow-50'} ${animate ? 'pulse-ring' : ''}`;
+            alertCard.id = `alert-${alertId}`;
+            
+            const issueLabels = {
+                'overcharging': 'Overcharging',
+                'service': 'Service Issue',
+                'food-quality': 'Food Quality',
+                'availability': 'Not Available',
+                'bill': 'No Bill',
+                'staff-behavior': 'Staff Behavior',
+                'appreciation': 'Appreciation',
+                'other': 'Other'
+            };
+
+            alertCard.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 rounded text-xs font-bold ${isUrgent ? 'bg-red-200 text-red-800' : isPositive ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}">
+                            ${isUrgent ? 'URGENT' : isPositive ? 'POSITIVE' : 'MEDIUM'}
+                        </span>
+                        <span class="text-xs text-slate-500">${new Date(data.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="flex text-yellow-400 text-sm">
+                        ${'★'.repeat(data.rating)}${'☆'.repeat(5-data.rating)}
+                    </div>
+                </div>
+                <p class="text-sm font-medium text-slate-800 mb-1">${issueLabels[data.issueType] || data.issueType}</p>
+                <p class="text-sm text-slate-600 mb-2">${data.description}</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-500">Coach ${data.coach} • Seat ${data.seat}</span>
+                    <div class="space-x-2">
+                        <button onclick="openResponseModal(${alertId})" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Respond</button>
+                        <button onclick="resolveAlert(${alertId})" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Resolve</button>
+                    </div>
+                </div>
+                ${data.photo ? `<img src="${data.photo}" class="mt-2 w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition" onclick="window.open('${data.photo}')">` : ''}
+            `;
+            
+            alertsContainer.insertBefore(alertCard, alertsContainer.firstChild);
+            alerts.push({ id: alertId, data, element: alertCard });
+            
+            // Update notification badge
+            const badge = document.getElementById('notificationBadge');
+            badge.textContent = alerts.filter(a => !a.resolved).length;
+            badge.classList.remove('hidden');
+        }
+
+        function updateStats() {
+            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            const today = new Date().toDateString();
+            const todayFeedbacks = feedbacks.filter(f => new Date(f.timestamp).toDateString() === today);
+            
+            document.getElementById('totalFeedback').textContent = todayFeedbacks.length;
+            
+            const urgent = todayFeedbacks.filter(f => f.rating <= 2 || f.issueType === 'overcharging').length;
+            document.getElementById('urgentCount').textContent = urgent;
+            
+            const pending = todayFeedbacks.filter(f => f.status === 'new').length;
+            document.getElementById('pendingCount').textContent = pending;
+            
+            const avg = todayFeedbacks.length > 0 
+                ? (todayFeedbacks.reduce((sum, f) => sum + f.rating, 0) / todayFeedbacks.length).toFixed(1)
+                : '0.0';
+            document.getElementById('avgRating').textContent = avg;
+            
+            // Update chart
+            const categories = ['overcharging', 'service', 'food-quality', 'other'];
+            const counts = categories.map(cat => todayFeedbacks.filter(f => f.issueType === cat).length);
+            issuesChart.data.datasets[0].data = counts;
+            issuesChart.update();
+        }
+
+        function filterAlerts(type) {
+            const container = document.getElementById('alertsContainer');
+            const allAlerts = container.querySelectorAll('.alert-card');
+            
+            allAlerts.forEach(alert => {
+                const isUrgent = alert.classList.contains('border-red-500');
+                const isPositive = alert.classList.contains('border-green-500');
+                
+                if (type === 'all') {
+                    alert.style.display = 'block';
+                } else if (type === 'urgent' && isUrgent) {
+                    alert.style.display = 'block';
+                } else if (type === 'positive' && isPositive) {
+                    alert.style.display = 'block';
+                } else {
+                    alert.style.display = 'none';
+                }
+            });
+        }
+
+        function openResponseModal(alertId) {
+            currentAlertId = alertId;
+            const alert = alerts.find(a => a.id === alertId);
+            document.getElementById('modalIssueText').textContent = alert.data.description;
+            document.getElementById('responseModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('responseModal').classList.add('hidden');
+            currentAlertId = null;
+        }
+
+        function useTemplate(text) {
+            document.getElementById('responseText').value = text;
+        }
+
+        function sendResponse() {
+            const response = document.getElementById('responseText').value;
+            if (!response.trim()) {
+                alert('Please enter a response');
+                return;
+            }
+            
+            // In real app, this would send to customer via SMS/WhatsApp
+            alert('Response recorded: ' + response);
+            resolveAlert(currentAlertId);
+            closeModal();
+        }
+
+        function resolveAlert(alertId) {
+            const alert = alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.resolved = true;
+                alert.element.style.opacity = '0.5';
+                alert.element.querySelector('button[onclick^="resolveAlert"]').textContent = 'Resolved';
+                alert.element.querySelector('button[onclick^="resolveAlert"]').disabled = true;
+                alert.element.querySelector('button[onclick^="resolveAlert"]').classList.add('bg-gray-400');
+                
+                // Update storage
+                const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+                const fb = feedbacks.find(f => f.timestamp === alert.data.timestamp);
+                if (fb) {
+                    fb.status = 'resolved';
+                    localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+                }
+                
+                updateStats();
+            }
+        }
+
+        function playNotificationSound() {
+            // Simple beep using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Clear old data (older than 7 days) on load
+        window.addEventListener('load', () => {
+            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const recent = feedbacks.filter(f => new Date(f.timestamp) > weekAgo);
+            localStorage.setItem('feedbacks', JSON.stringify(recent));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RK Group - Customer Feedback</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        
+        .qr-scan {
+            position: relative;
+            overflow: hidden;
+        }
+        .qr-scan::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+            animation: scan 2s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        .star-rating {
+            direction: rtl;
+            display: inline-flex;
+        }
+        .star-rating input {
+            display: none;
+        }
+        .star-rating label {
+            color: #d1d5db;
+            font-size: 2rem;
+            padding: 0 0.1rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .star-rating input:checked ~ label,
+        .star-rating label:hover,
+        .star-rating label:hover ~ label {
+            color: #fbbf24;
+        }
+        
+        .success-animation {
+            animation: successPop 0.5s ease-out;
+        }
+        @keyframes successPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 min-h-screen">
+    
+    <!-- Header -->
+    <div class="bg-white shadow-lg">
+        <div class="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center text-white font-bold">RK</div>
+                <div>
+                    <h1 class="font-bold text-slate-800 text-lg">RK Group</h1>
+                    <p class="text-xs text-slate-500">Railway Catering Services</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-slate-600" id="currentTime"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-md mx-auto px-4 py-6">
+        
+        <!-- Train Info Card -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <p class="text-xs text-slate-500 uppercase tracking-wide">Train Number</p>
+                    <p class="text-2xl font-bold text-slate-800" id="trainNumber">Loading...</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-slate-500 uppercase tracking-wide">Coach/Seat</p>
+                    <p class="text-lg font-bold text-blue-600" id="coachInfo">Loading...</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
+                <i class="fas fa-route text-blue-500"></i>
+                <span id="routeInfo">Loading route information...</span>
+            </div>
+        </div>
+
+        <!-- Feedback Form -->
+        <div class="bg-white rounded-2xl shadow-xl p-6" id="feedbackForm">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-comment-dots text-3xl text-blue-600"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-800 mb-2">How was your experience?</h2>
+                <p class="text-sm text-slate-500">Your feedback helps us serve you better</p>
+            </div>
+
+            <!-- Star Rating -->
+            <div class="text-center mb-6">
+                <p class="text-sm font-medium text-slate-700 mb-2">Rate your experience</p>
+                <div class="star-rating">
+                    <input type="radio" id="star5" name="rating" value="5"><label for="star5">★</label>
+                    <input type="radio" id="star4" name="rating" value="4"><label for="star4">★</label>
+                    <input type="radio" id="star3" name="rating" value="3"><label for="star3">★</label>
+                    <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
+                    <input type="radio" id="star1" name="rating" value="1"><label for="star1">★</label>
+                </div>
+            </div>
+
+            <!-- Issue Type -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Type of Feedback</label>
+                <select id="issueType" class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                    <option value="">Select an option...</option>
+                    <option value="overcharging">Overcharging / Wrong Bill</option>
+                    <option value="service">Service Quality Issue</option>
+                    <option value="food-quality">Food Quality Problem</option>
+                    <option value="availability">Item Not Available</option>
+                    <option value="bill">Bill Not Provided</option>
+                    <option value="staff-behavior">Staff Behavior</option>
+                    <option value="appreciation">Appreciation / Good Service</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                <textarea id="description" rows="4" class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" placeholder="Please describe your experience in detail..."></textarea>
+            </div>
+
+            <!-- Photo Upload -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Attach Photo (Optional)</label>
+                <div class="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-500 transition cursor-pointer" onclick="document.getElementById('photoInput').click()">
+                    <i class="fas fa-camera text-2xl text-slate-400 mb-2"></i>
+                    <p class="text-sm text-slate-500">Click to upload photo evidence</p>
+                    <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(this)">
+                </div>
+                <div id="photoPreview" class="hidden mt-3">
+                    <img id="previewImg" class="w-full h-32 object-cover rounded-lg">
+                    <button onclick="removePhoto()" class="text-red-500 text-sm mt-1"><i class="fas fa-trash mr-1"></i>Remove</button>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button onclick="submitFeedback()" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex items-center justify-center space-x-2">
+                <i class="fas fa-paper-plane"></i>
+                <span>Submit Feedback</span>
+            </button>
+
+            <!-- WhatsApp Alternative -->
+            <div class="mt-4 text-center">
+                <p class="text-sm text-slate-500 mb-2">Or contact directly via</p>
+                <a href="#" id="whatsappLink" class="inline-flex items-center space-x-2 bg-green-500 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-green-600 transition">
+                    <i class="fab fa-whatsapp text-lg"></i>
+                    <span>WhatsApp</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Success Message (Hidden by default) -->
+        <div id="successMessage" class="hidden bg-white rounded-2xl shadow-xl p-8 text-center success-animation">
+            <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-check-circle text-4xl text-green-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Thank You!</h2>
+            <p class="text-slate-600 mb-4">Your feedback has been submitted successfully.</p>
+            <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                <p class="text-sm text-blue-800 font-medium">Reference ID: <span id="refId">#RK2026001</span></p>
+                <p class="text-xs text-blue-600 mt-1">Manager has been notified instantly</p>
+            </div>
+            <button onclick="resetForm()" class="text-blue-600 font-medium hover:text-blue-800">
+                Submit another feedback
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const trainNo = urlParams.get('train') || '12649';
+        const coach = urlParams.get('coach') || 'S4';
+        const seat = urlParams.get('seat') || '42';
+        
+        // Set page info
+        document.getElementById('trainNumber').textContent = trainNo;
+        document.getElementById('coachInfo').textContent = `${coach} / Seat ${seat}`;
+        document.getElementById('routeInfo').textContent = getRouteInfo(trainNo);
+        
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleString('en-IN', {
+                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+        }
+        updateTime();
+        setInterval(updateTime, 60000);
+
+        function getRouteInfo(trainNo) {
+            const routes = {
+                '12649': 'NZM → YPR (YPR Express)',
+                '12628': 'SBC → NDLS (Karnataka Express)',
+                '12860': 'HWH → CSTM (Gitanjali Express)'
+            };
+            return routes[trainNo] || 'Indian Railways';
+        }
+
+        // Photo upload handler
+        let uploadedPhoto = null;
+        function handlePhotoUpload(input) {
+            if (input.files && input.files[0]) {
+                uploadedPhoto = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('photoPreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removePhoto() {
+            uploadedPhoto = null;
+            document.getElementById('photoInput').value = '';
+            document.getElementById('photoPreview').classList.add('hidden');
+        }
+
+        // Submit feedback
+        async function submitFeedback() {
+            const rating = document.querySelector('input[name="rating"]:checked')?.value;
+            const issueType = document.getElementById('issueType').value;
+            const description = document.getElementById('description').value;
+
+            if (!rating) {
+                alert('Please select a star rating');
+                return;
+            }
+            if (!issueType) {
+                alert('Please select feedback type');
+                return;
+            }
+            if (!description.trim()) {
+                alert('Please provide a description');
+                return;
+            }
+
+            // Prepare data
+            const feedbackData = {
+                trainNumber: trainNo,
+                coach: coach,
+                seat: seat,
+                rating: parseInt(rating),
+                issueType: issueType,
+                description: description,
+                timestamp: new Date().toISOString(),
+                status: 'new',
+                photo: uploadedPhoto ? await convertToBase64(uploadedPhoto) : null
+            };
+
+            // Save to localStorage (simulating database)
+            saveFeedback(feedbackData);
+
+            // Show success
+            document.getElementById('feedbackForm').classList.add('hidden');
+            document.getElementById('successMessage').classList.remove('hidden');
+            document.getElementById('refId').textContent = '#RK' + Date.now().toString().slice(-8);
+        }
+
+        function convertToBase64(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function saveFeedback(data) {
+            let feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            feedbacks.push(data);
+            localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+            
+            // Trigger notification to manager (in real app, this would be a push notification)
+            localStorage.setItem('newFeedback', JSON.stringify(data));
+        }
+
+        function resetForm() {
+            document.getElementById('feedbackForm').classList.remove('hidden');
+            document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('issueType').value = '';
+            document.getElementById('description').value = '';
+            document.querySelectorAll('input[name="rating"]').forEach(r => r.checked = false);
+            removePhoto();
+        }
+
+        // WhatsApp link setup
+        const whatsappMsg = encodeURIComponent(`Hello RK Group, I need assistance regarding Train ${trainNo}, Coach ${coach}, Seat ${seat}`);
+        document.getElementById('whatsappLink').href = `https://wa.me/919999999999?text=${whatsappMsg}`;
+    </script>
+</body>
+</html>
