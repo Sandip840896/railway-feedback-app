@@ -273,13 +273,9 @@
             }
         });
 
-        // Real-time listener
+        // Real-time listener - FIXED: Listen to ALL feedbacks, not just today
         function startListening() {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
             unsubscribe = db.collection('feedbacks')
-                .where('timestamp', '>=', today)
                 .orderBy('timestamp', 'desc')
                 .onSnapshot((snapshot) => {
                     allFeedbacks = [];
@@ -315,7 +311,7 @@
                 container.innerHTML = `
                     <div class="p-8 text-center text-slate-400">
                         <i class="fas fa-inbox text-4xl mb-2"></i>
-                        <p>No feedback received yet today.</p>
+                        <p>No feedback received yet.</p>
                     </div>
                 `;
                 return;
@@ -342,6 +338,14 @@
             const time = fb.timestamp ? fb.timestamp.toDate().toLocaleTimeString() : 'Just now';
             const resolvedClass = fb.status === 'resolved' ? 'opacity-50' : '';
             const resolvedBadge = fb.status === 'resolved' ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">RESOLVED</span>' : '';
+            
+            // Show manager response if exists
+            const managerResponse = fb.managerResponse ? `
+                <div class="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                    <p class="text-xs text-blue-600 font-medium">Manager Response:</p>
+                    <p class="text-sm text-blue-800">${fb.managerResponse}</p>
+                </div>
+            ` : '';
 
             return `
                 <div class="alert-card p-4 border-l-4 ${borderColor} ${bgColor} ${resolvedClass} hover:shadow-md transition" id="alert-${fb.id}">
@@ -357,7 +361,8 @@
                     </div>
                     <p class="text-sm font-medium text-slate-800 mb-1">${issueLabels[fb.issueType] || fb.issueType}</p>
                     <p class="text-sm text-slate-600 mb-2">${fb.description}</p>
-                    <div class="flex items-center justify-between">
+                    ${managerResponse}
+                    <div class="flex items-center justify-between mt-2">
                         <div>
                             <span class="text-xs text-slate-500">Coach ${fb.coach} • Seat ${fb.seat}</span>
                             ${fb.trainNumber ? `<span class="text-xs text-blue-600 ml-2">Train ${fb.trainNumber}</span>` : ''}
@@ -391,10 +396,14 @@
         }
 
         function updateStats() {
-            const today = new Date().toDateString();
+            // FIXED: Get today's date properly
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
             const todayFeedbacks = allFeedbacks.filter(f => {
                 if (!f.timestamp) return false;
-                return f.timestamp.toDate().toDateString() === today;
+                const fbDate = f.timestamp.toDate();
+                return fbDate >= today;
             });
             
             document.getElementById('totalFeedback').textContent = todayFeedbacks.length;
@@ -428,19 +437,31 @@
         }
 
         function updateCharts() {
-            // Update issues chart
+            // FIXED: Use today's data for charts
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayFeedbacks = allFeedbacks.filter(f => {
+                if (!f.timestamp) return false;
+                return f.timestamp.toDate() >= today;
+            });
+            
+            // Update issues chart - FIXED: Include all issue types properly
             const categories = ['overcharging', 'service', 'food-quality', 'other'];
-            const counts = categories.map(cat => allFeedbacks.filter(f => f.issueType === cat).length);
+            const categoryLabels = ['Overcharging', 'Service', 'Food Quality', 'Others'];
+            const counts = categories.map(cat => todayFeedbacks.filter(f => f.issueType === cat).length);
+            
+            // If no data, show at least something or all zeros
             issuesChart.data.datasets[0].data = counts;
             issuesChart.update();
 
-            // Update hourly chart
+            // Update hourly chart - FIXED: Proper hour calculation
             const hours = Array(12).fill(0);
-            allFeedbacks.forEach(f => {
+            todayFeedbacks.forEach(f => {
                 if (f.timestamp) {
                     const hour = f.timestamp.toDate().getHours();
-                    const slot = Math.floor(hour / 2);
-                    if (slot < 12) hours[slot]++;
+                    const slot = Math.min(Math.floor(hour / 2), 11);
+                    hours[slot]++;
                 }
             });
             hourlyChart.data.datasets[0].data = hours;
@@ -512,20 +533,28 @@
             setTimeout(() => icon.classList.remove('fa-spin'), 1000);
         }
 
+        // FIXED: Export includes manager response
         function exportData() {
             const csv = [
-                ['Time', 'Train', 'Coach', 'Seat', 'Rating', 'Issue Type', 'Description', 'Status', 'Phone'].join(','),
-                ...allFeedbacks.map(f => [
-                    f.timestamp ? f.timestamp.toDate().toLocaleString() : 'N/A',
-                    f.trainNumber || 'N/A',
-                    f.coach || 'N/A',
-                    f.seat || 'N/A',
-                    f.rating,
-                    f.issueType,
-                    `"${(f.description || '').replace(/"/g, '""')}"`,
-                    f.status,
-                    f.customerPhone || 'N/A'
-                ].join(','))
+                ['Date', 'Time', 'Train', 'Coach', 'Seat', 'Rating', 'Issue Type', 'Description', 'Status', 'Phone', 'Manager Response', 'Resolved At'].join(','),
+                ...allFeedbacks.map(f => {
+                    const date = f.timestamp ? f.timestamp.toDate() : new Date();
+                    const resolvedAt = f.resolvedAt ? f.resolvedAt.toDate().toLocaleString() : '';
+                    return [
+                        date.toLocaleDateString(),
+                        date.toLocaleTimeString(),
+                        f.trainNumber || 'N/A',
+                        f.coach || 'N/A',
+                        f.seat || 'N/A',
+                        f.rating,
+                        f.issueType,
+                        `"${(f.description || '').replace(/"/g, '""')}"`,
+                        f.status,
+                        f.customerPhone || 'N/A',
+                        `"${(f.managerResponse || '').replace(/"/g, '""')}"`,
+                        resolvedAt
+                    ].join(',');
+                })
             ].join('\n');
 
             const blob = new Blob([csv], { type: 'text/csv' });
