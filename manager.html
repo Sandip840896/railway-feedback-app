@@ -6,7 +6,7 @@
     <title>RK Group - Manager Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; }
@@ -23,6 +23,8 @@
         
         .new-alert { animation: highlight 2s ease-out; }
         @keyframes highlight { 0% { background-color: #fef3c7; } 100% { background-color: transparent; } }
+        
+        .chart-container { position: relative; height: 200px; width: 100%; }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -31,7 +33,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
     <script>
-        // REPLACE THIS WITH YOUR ACTUAL FIREBASE CONFIG
         const firebaseConfig = {
     apiKey: "AIzaSyDMcHok-Q-w6a0BwG2w1sFvSxQwgTXlnUg",
     authDomain: "rk-group-feedback.firebaseapp.com",
@@ -168,7 +169,7 @@
                     </div>
                     <div id="alertsContainer" class="divide-y divide-slate-200 max-h-[600px] overflow-y-auto">
                         <div class="p-8 text-center text-slate-400">
-                            <div class="loading mx-auto mb-4"></div>
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                             <p>Connecting to cloud database...</p>
                         </div>
                     </div>
@@ -180,13 +181,17 @@
                 <!-- Analytics -->
                 <div class="bg-white rounded-xl shadow-md p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4">Today's Issues</h3>
-                    <canvas id="issuesChart" height="200"></canvas>
+                    <div class="chart-container">
+                        <canvas id="issuesChart"></canvas>
+                    </div>
                 </div>
 
                 <!-- Hourly Trend -->
                 <div class="bg-white rounded-xl shadow-md p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4">Hourly Activity</h3>
-                    <canvas id="hourlyChart" height="150"></canvas>
+                    <div class="chart-container" style="height: 150px;">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
                 </div>
 
                 <!-- Performance -->
@@ -195,10 +200,10 @@
                     <div class="relative pt-1">
                         <div class="flex mb-2 items-center justify-between">
                             <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200" id="resolutionLabel">Excellent</span>
-                            <span class="text-xs font-semibold inline-block text-green-600" id="resolutionPercent">94%</span>
+                            <span class="text-xs font-semibold inline-block text-green-600" id="resolutionPercent">0%</span>
                         </div>
                         <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
-                            <div id="resolutionBar" style="width:94%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
+                            <div id="resolutionBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
                         </div>
                         <p class="text-xs text-slate-500">Issues resolved before escalation</p>
                     </div>
@@ -227,55 +232,72 @@
     <script>
         let currentDocId = null;
         let allFeedbacks = [];
-        let unsubscribe = null;
+        let issuesChart = null;
+        let hourlyChart = null;
         
-        // Initialize charts
-        const issuesCtx = document.getElementById('issuesChart').getContext('2d');
-        const issuesChart = new Chart(issuesCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Overcharging', 'Service', 'Food Quality', 'Others'],
-                datasets: [{
-                    data: [0, 0, 0, 0],
-                    backgroundColor: ['#ef4444', '#f97316', '#eab308', '#6b7280'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
-            }
+        // Initialize charts when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            startListening();
         });
-
-        const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
-        const hourlyChart = new Chart(hourlyCtx, {
-            type: 'line',
-            data: {
-                labels: Array.from({length: 12}, (_, i) => `${i*2}:00`),
-                datasets: [{
-                    label: 'Feedback',
-                    data: Array(12).fill(0),
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    x: { grid: { display: false } }
+        
+        function initCharts() {
+            // Issues Chart
+            const issuesCtx = document.getElementById('issuesChart').getContext('2d');
+            issuesChart = new Chart(issuesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Overcharging', 'Service', 'Food Quality', 'Bill Issue', 'Others'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#8b5cf6', '#6b7280'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { 
+                                boxWidth: 12, 
+                                font: { size: 10 },
+                                padding: 10
+                            } 
+                        } 
+                    }
                 }
-            }
-        });
+            });
 
-        // Real-time listener - FIXED: Listen to ALL feedbacks, not just today
+            // Hourly Chart
+            const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+            hourlyChart = new Chart(hourlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM', '10PM', '12AM'],
+                    datasets: [{
+                        label: 'Complaints',
+                        data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
         function startListening() {
-            unsubscribe = db.collection('feedbacks')
+            db.collection('feedbacks')
                 .orderBy('timestamp', 'desc')
                 .onSnapshot((snapshot) => {
                     allFeedbacks = [];
@@ -286,11 +308,9 @@
                     updateStats();
                     updateCharts();
                     
-                    // Check for new items
                     snapshot.docChanges().forEach((change) => {
                         if (change.type === 'added') {
                             playNotificationSound();
-                            highlightNewAlert(change.doc.id);
                         }
                     });
                 }, (error) => {
@@ -336,13 +356,12 @@
             };
 
             const time = fb.timestamp ? fb.timestamp.toDate().toLocaleTimeString() : 'Just now';
-            const resolvedClass = fb.status === 'resolved' ? 'opacity-50' : '';
-            const resolvedBadge = fb.status === 'resolved' ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">RESOLVED</span>' : '';
+            const resolvedClass = fb.status === 'resolved' ? 'opacity-60' : '';
+            const resolvedBadge = fb.status === 'resolved' ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">RESOLVED</span>' : '';
             
-            // Show manager response if exists
             const managerResponse = fb.managerResponse ? `
-                <div class="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-                    <p class="text-xs text-blue-600 font-medium">Manager Response:</p>
+                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p class="text-xs text-blue-600 font-semibold mb-1"><i class="fas fa-reply mr-1"></i>Manager Response:</p>
                     <p class="text-sm text-blue-800">${fb.managerResponse}</p>
                 </div>
             ` : '';
@@ -359,22 +378,22 @@
                             ${'★'.repeat(fb.rating)}${'☆'.repeat(5-fb.rating)}
                         </div>
                     </div>
-                    <p class="text-sm font-medium text-slate-800 mb-1">${issueLabels[fb.issueType] || fb.issueType}</p>
+                    <p class="text-sm font-bold text-slate-800 mb-1">${issueLabels[fb.issueType] || fb.issueType}</p>
                     <p class="text-sm text-slate-600 mb-2">${fb.description}</p>
                     ${managerResponse}
-                    <div class="flex items-center justify-between mt-2">
+                    <div class="flex items-center justify-between mt-3">
                         <div>
-                            <span class="text-xs text-slate-500">Coach ${fb.coach} • Seat ${fb.seat}</span>
-                            ${fb.trainNumber ? `<span class="text-xs text-blue-600 ml-2">Train ${fb.trainNumber}</span>` : ''}
+                            <span class="text-xs font-medium text-slate-600">Coach ${fb.coach} • Seat ${fb.seat}</span>
+                            ${fb.trainNumber ? `<span class="text-xs font-bold text-blue-600 ml-2">Train ${fb.trainNumber}</span>` : ''}
                         </div>
                         ${fb.status !== 'resolved' ? `
                             <div class="space-x-2">
-                                <button onclick="openResponseModal('${fb.id}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Respond</button>
-                                <button onclick="quickResolve('${fb.id}')" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Resolve</button>
+                                <button onclick="openResponseModal('${fb.id}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition font-medium">Respond</button>
+                                <button onclick="quickResolve('${fb.id}')" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition font-medium">Resolve</button>
                             </div>
                         ` : ''}
                     </div>
-                    ${fb.photo ? `<img src="${fb.photo}" class="mt-2 w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition" onclick="window.open('${fb.photo}')">` : ''}
+                    ${fb.photo ? `<img src="${fb.photo}" class="mt-3 w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition border border-slate-200" onclick="window.open('${fb.photo}')">` : ''}
                 </div>
             `;
         }
@@ -396,9 +415,8 @@
         }
 
         function updateStats() {
-            // FIXED: Get today's date properly
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
             const todayFeedbacks = allFeedbacks.filter(f => {
                 if (!f.timestamp) return false;
@@ -419,14 +437,12 @@
                 : '0.0';
             document.getElementById('avgRating').textContent = avg;
 
-            // Update resolution rate
             const resolved = todayFeedbacks.filter(f => f.status === 'resolved').length;
             const rate = todayFeedbacks.length > 0 ? Math.round((resolved / todayFeedbacks.length) * 100) : 0;
             document.getElementById('resolutionPercent').textContent = rate + '%';
             document.getElementById('resolutionBar').style.width = rate + '%';
             document.getElementById('resolutionLabel').textContent = rate > 80 ? 'Excellent' : rate > 60 ? 'Good' : 'Needs Improvement';
 
-            // Update badge
             const badge = document.getElementById('notificationBadge');
             if (pending > 0) {
                 badge.textContent = pending;
@@ -437,42 +453,39 @@
         }
 
         function updateCharts() {
-            // FIXED: Use today's data for charts
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
             const todayFeedbacks = allFeedbacks.filter(f => {
                 if (!f.timestamp) return false;
                 return f.timestamp.toDate() >= today;
             });
             
-            // Update issues chart - FIXED: Include all issue types properly
-            const categories = ['overcharging', 'service', 'food-quality', 'other'];
-            const categoryLabels = ['Overcharging', 'Service', 'Food Quality', 'Others'];
+            // Update issues chart - FIXED
+            const categories = ['overcharging', 'service', 'food-quality', 'bill', 'other'];
             const counts = categories.map(cat => todayFeedbacks.filter(f => f.issueType === cat).length);
             
-            // If no data, show at least something or all zeros
-            issuesChart.data.datasets[0].data = counts;
-            issuesChart.update();
+            if (issuesChart) {
+                issuesChart.data.datasets[0].data = counts;
+                issuesChart.update();
+            }
 
-            // Update hourly chart - FIXED: Proper hour calculation
-            const hours = Array(12).fill(0);
+            // Update hourly chart - FIXED
+            const hours = Array(10).fill(0);
             todayFeedbacks.forEach(f => {
                 if (f.timestamp) {
                     const hour = f.timestamp.toDate().getHours();
-                    const slot = Math.min(Math.floor(hour / 2), 11);
-                    hours[slot]++;
+                    if (hour >= 6 && hour <= 23) {
+                        const slot = Math.floor((hour - 6) / 2);
+                        if (slot >= 0 && slot < 10) hours[slot]++;
+                    }
                 }
             });
-            hourlyChart.data.datasets[0].data = hours;
-            hourlyChart.update();
-        }
-
-        function highlightNewAlert(id) {
-            setTimeout(() => {
-                const el = document.getElementById(`alert-${id}`);
-                if (el) el.classList.add('new-alert');
-            }, 100);
+            
+            if (hourlyChart) {
+                hourlyChart.data.datasets[0].data = hours;
+                hourlyChart.update();
+            }
         }
 
         function filterAlerts(type) {
@@ -533,36 +546,45 @@
             setTimeout(() => icon.classList.remove('fa-spin'), 1000);
         }
 
-        // FIXED: Export includes manager response
+        // FIXED CSV Export with Reference ID and Manager Response
         function exportData() {
-            const csv = [
-                ['Date', 'Time', 'Train', 'Coach', 'Seat', 'Rating', 'Issue Type', 'Description', 'Status', 'Phone', 'Manager Response', 'Resolved At'].join(','),
-                ...allFeedbacks.map(f => {
-                    const date = f.timestamp ? f.timestamp.toDate() : new Date();
-                    const resolvedAt = f.resolvedAt ? f.resolvedAt.toDate().toLocaleString() : '';
-                    return [
-                        date.toLocaleDateString(),
-                        date.toLocaleTimeString(),
-                        f.trainNumber || 'N/A',
-                        f.coach || 'N/A',
-                        f.seat || 'N/A',
-                        f.rating,
-                        f.issueType,
-                        `"${(f.description || '').replace(/"/g, '""')}"`,
-                        f.status,
-                        f.customerPhone || 'N/A',
-                        `"${(f.managerResponse || '').replace(/"/g, '""')}"`,
-                        resolvedAt
-                    ].join(',');
-                })
-            ].join('\n');
+            const headers = ['Date', 'Time', 'Reference ID', 'Train', 'Coach', 'Seat', 'Rating', 'Issue Type', 'Description', 'Customer Phone', 'Status', 'Manager Response', 'Resolved At'];
+            
+            const rows = allFeedbacks.map(f => {
+                const date = f.timestamp ? f.timestamp.toDate() : new Date();
+                const dateStr = date.toLocaleDateString('en-IN');
+                const timeStr = date.toLocaleTimeString('en-IN');
+                const resolvedAt = f.resolvedAt ? f.resolvedAt.toDate().toLocaleString('en-IN') : '';
+                const refId = '#' + f.id.slice(-8).toUpperCase();
+                
+                return [
+                    dateStr,
+                    timeStr,
+                    refId,
+                    f.trainNumber || 'N/A',
+                    f.coach || 'N/A',
+                    f.seat || 'N/A',
+                    f.rating,
+                    f.issueType,
+                    `"${(f.description || '').replace(/"/g, '""')}"`,
+                    f.customerPhone || 'N/A',
+                    f.status,
+                    `"${(f.managerResponse || 'No response').replace(/"/g, '""')}"`,
+                    resolvedAt
+                ].join(',');
+            });
 
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const csv = [headers.join(','), ...rows].join('\n');
+            
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `feedback-export-${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `RK-Feedback-Export-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         }
 
         function playNotificationSound() {
@@ -585,7 +607,6 @@
             } catch(e) { console.log('Audio not supported'); }
         }
 
-        // Connection status
         function checkConnection() {
             const status = document.getElementById('connectionStatus');
             if (navigator.onLine) {
@@ -599,9 +620,6 @@
         
         window.addEventListener('online', checkConnection);
         window.addEventListener('offline', checkConnection);
-
-        // Start
-        startListening();
     </script>
 </body>
 </html>
