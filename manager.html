@@ -11,47 +11,40 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; }
         
-        .pulse-ring {
-            position: relative;
-        }
-        .pulse-ring::before {
-            content: '';
-            position: absolute;
-            inset: -4px;
-            border-radius: inherit;
-            border: 2px solid #ef4444;
-            animation: pulseRing 2s ease-out infinite;
-        }
-        @keyframes pulseRing {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.2); opacity: 0; }
-        }
+        .pulse-ring { position: relative; }
+        .pulse-ring::before { content: ''; position: absolute; inset: -4px; border-radius: inherit; border: 2px solid #ef4444; animation: pulseRing 2s ease-out infinite; }
+        @keyframes pulseRing { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
         
-        .alert-card {
-            animation: slideIn 0.3s ease-out;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(-20px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
+        .alert-card { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        .status-live::before {
-            content: '';
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            margin-right: 6px;
-            animation: livePulse 2s infinite;
-        }
-        @keyframes livePulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+        .status-live::before { content: ''; display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 6px; animation: livePulse 2s infinite; }
+        @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .new-alert { animation: highlight 2s ease-out; }
+        @keyframes highlight { 0% { background-color: #fef3c7; } 100% { background-color: transparent; } }
     </style>
 </head>
 <body class="bg-slate-100">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // REPLACE THIS WITH YOUR ACTUAL FIREBASE CONFIG
+        const firebaseConfig = {
+    apiKey: "AIzaSyDMcHok-Q-w6a0BwG2w1sFvSxQwgTXlnUg",
+    authDomain: "rk-group-feedback.firebaseapp.com",
+    projectId: "rk-group-feedback",
+    storageBucket: "rk-group-feedback.firebasestorage.app",
+    messagingSenderId: "89598658685",
+    appId: "1:89598658685:web:398d8a06db8bea367ec914"
+  };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+
     <!-- Navigation -->
     <nav class="bg-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -60,20 +53,20 @@
                     <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">RK</div>
                     <div>
                         <h1 class="font-bold text-slate-800 text-lg">Manager Dashboard</h1>
-                        <p class="text-xs text-slate-500">Real-time Monitoring System</p>
+                        <p class="text-xs text-slate-500">Cloud Connected • Real-time</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <span class="status-live text-sm font-medium text-green-600 flex items-center">
-                        Live Monitoring
+                    <span class="status-live text-sm font-medium text-green-600 flex items-center" id="connectionStatus">
+                        Live Sync
                     </span>
                     <div class="relative">
                         <i class="fas fa-bell text-slate-600 text-xl cursor-pointer hover:text-blue-600 transition"></i>
                         <span id="notificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
                     </div>
-                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user text-blue-600"></i>
-                    </div>
+                    <button onclick="refreshData()" class="p-2 text-slate-600 hover:text-blue-600 transition" title="Refresh">
+                        <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -131,6 +124,33 @@
             </div>
         </div>
 
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm font-medium text-slate-700">Train:</label>
+                    <select id="trainFilter" onchange="applyFilters()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="all">All Trains</option>
+                        <option value="12649">12649 - YPR Express</option>
+                        <option value="12628">12628 - Karnataka Exp</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm font-medium text-slate-700">Status:</label>
+                    <select id="statusFilter" onchange="applyFilters()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="all">All</option>
+                        <option value="new">New</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+                <div class="flex-1"></div>
+                <button onclick="exportData()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition flex items-center space-x-2">
+                    <i class="fas fa-download"></i>
+                    <span>Export CSV</span>
+                </button>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Alerts Feed -->
             <div class="lg:col-span-2">
@@ -146,62 +166,27 @@
                             <button onclick="filterAlerts('positive')" class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">Positive</button>
                         </div>
                     </div>
-                    <div id="alertsContainer" class="divide-y divide-slate-200 max-h-96 overflow-y-auto">
-                        <!-- Alerts will be inserted here -->
+                    <div id="alertsContainer" class="divide-y divide-slate-200 max-h-[600px] overflow-y-auto">
                         <div class="p-8 text-center text-slate-400">
-                            <i class="fas fa-inbox text-4xl mb-2"></i>
-                            <p>No alerts yet. Waiting for customer feedback...</p>
+                            <div class="loading mx-auto mb-4"></div>
+                            <p>Connecting to cloud database...</p>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Response Templates -->
-                <div class="bg-white rounded-xl shadow-md mt-6 p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Quick Response Templates</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <button onclick="useTemplate('We apologize for the inconvenience. Our staff is on the way to resolve this issue immediately.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <i class="fas fa-running text-blue-500 mr-2"></i>
-                            Staff on the way
-                        </button>
-                        <button onclick="useTemplate('Thank you for your feedback. We are investigating this issue and will take appropriate action.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <i class="fas fa-search text-blue-500 mr-2"></i>
-                            Investigating
-                        </button>
-                        <button onclick="useTemplate('We sincerely apologize. A refund of ₹[AMOUNT] has been initiated and will be processed within 24 hours.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <i class="fas fa-undo text-blue-500 mr-2"></i>
-                            Refund initiated
-                        </button>
-                        <button onclick="useTemplate('Thank you for your appreciation! We look forward to serving you again.')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <i class="fas fa-heart text-blue-500 mr-2"></i>
-                            Thank you
-                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Sidebar -->
             <div class="space-y-6">
-                <!-- Train Status -->
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Train Status</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                            <div class="flex items-center">
-                                <i class="fas fa-train text-green-600 mr-3"></i>
-                                <div>
-                                    <p class="font-medium text-slate-800 text-sm">12649 - YPR Express</p>
-                                    <p class="text-xs text-slate-500">Running On Time</p>
-                                </div>
-                            </div>
-                            <span class="text-xs font-bold text-green-600">Active</span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Analytics -->
                 <div class="bg-white rounded-xl shadow-md p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4">Today's Issues</h3>
                     <canvas id="issuesChart" height="200"></canvas>
+                </div>
+
+                <!-- Hourly Trend -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Hourly Activity</h3>
+                    <canvas id="hourlyChart" height="150"></canvas>
                 </div>
 
                 <!-- Performance -->
@@ -209,21 +194,13 @@
                     <h3 class="text-lg font-bold text-slate-800 mb-4">Resolution Rate</h3>
                     <div class="relative pt-1">
                         <div class="flex mb-2 items-center justify-between">
-                            <div>
-                                <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">
-                                    Excellent
-                                </span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xs font-semibold inline-block text-green-600">
-                                    94%
-                                </span>
-                            </div>
+                            <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200" id="resolutionLabel">Excellent</span>
+                            <span class="text-xs font-semibold inline-block text-green-600" id="resolutionPercent">94%</span>
                         </div>
                         <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
-                            <div style="width:94%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"></div>
+                            <div id="resolutionBar" style="width:94%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
                         </div>
-                        <p class="text-xs text-slate-500">Issues resolved before IRCTC escalation</p>
+                        <p class="text-xs text-slate-500">Issues resolved before escalation</p>
                     </div>
                 </div>
             </div>
@@ -235,24 +212,26 @@
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 class="text-lg font-bold text-slate-800 mb-4">Respond to Customer</h3>
             <div class="mb-4 p-3 bg-slate-50 rounded-lg">
-                <p class="text-sm text-slate-600 mb-1">Original Issue:</p>
+                <p class="text-sm text-slate-600 mb-1">Issue:</p>
                 <p class="text-sm font-medium text-slate-800" id="modalIssueText">Loading...</p>
+                <p class="text-xs text-slate-500 mt-1" id="modalContactInfo"></p>
             </div>
             <textarea id="responseText" rows="4" class="w-full border border-slate-300 rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Type your response..."></textarea>
             <div class="flex space-x-3">
                 <button onclick="closeModal()" class="flex-1 py-3 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition">Cancel</button>
-                <button onclick="sendResponse()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">Send Response</button>
+                <button onclick="sendResponse()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">Mark Resolved</button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentAlertId = null;
-        let alerts = [];
+        let currentDocId = null;
+        let allFeedbacks = [];
+        let unsubscribe = null;
         
-        // Initialize chart
-        const ctx = document.getElementById('issuesChart').getContext('2d');
-        const issuesChart = new Chart(ctx, {
+        // Initialize charts
+        const issuesCtx = document.getElementById('issuesChart').getContext('2d');
+        const issuesChart = new Chart(issuesCtx, {
             type: 'doughnut',
             data: {
                 labels: ['Overcharging', 'Service', 'Food Quality', 'Others'],
@@ -269,93 +248,154 @@
             }
         });
 
-        // Check for new feedback every 2 seconds
-        setInterval(checkNewFeedback, 2000);
-        
-        // Initial load
-        loadAllFeedback();
-
-        function checkNewFeedback() {
-            const newFeedback = localStorage.getItem('newFeedback');
-            if (newFeedback) {
-                const data = JSON.parse(newFeedback);
-                addAlert(data);
-                localStorage.removeItem('newFeedback');
-                updateStats();
-                playNotificationSound();
+        const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+        const hourlyChart = new Chart(hourlyCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 12}, (_, i) => `${i*2}:00`),
+                datasets: [{
+                    label: 'Feedback',
+                    data: Array(12).fill(0),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
             }
+        });
+
+        // Real-time listener
+        function startListening() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            unsubscribe = db.collection('feedbacks')
+                .where('timestamp', '>=', today)
+                .orderBy('timestamp', 'desc')
+                .onSnapshot((snapshot) => {
+                    allFeedbacks = [];
+                    snapshot.forEach((doc) => {
+                        allFeedbacks.push({ id: doc.id, ...doc.data() });
+                    });
+                    applyFilters();
+                    updateStats();
+                    updateCharts();
+                    
+                    // Check for new items
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            playNotificationSound();
+                            highlightNewAlert(change.doc.id);
+                        }
+                    });
+                }, (error) => {
+                    console.error('Error:', error);
+                    document.getElementById('alertsContainer').innerHTML = `
+                        <div class="p-8 text-center text-red-500">
+                            <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                            <p>Error connecting to database. Please refresh.</p>
+                        </div>
+                    `;
+                });
         }
 
-        function loadAllFeedback() {
-            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
-            feedbacks.reverse().forEach(f => addAlert(f, false));
-            updateStats();
-        }
-
-        function addAlert(data, animate = true) {
-            const alertsContainer = document.getElementById('alertsContainer');
+        function renderAlerts(feedbacks) {
+            const container = document.getElementById('alertsContainer');
             
-            // Remove "no alerts" message if present
-            if (alertsContainer.children.length === 1 && alertsContainer.children[0].querySelector('.fa-inbox')) {
-                alertsContainer.innerHTML = '';
+            if (feedbacks.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-slate-400">
+                        <i class="fas fa-inbox text-4xl mb-2"></i>
+                        <p>No feedback received yet today.</p>
+                    </div>
+                `;
+                return;
             }
 
-            const alertId = Date.now();
-            const isUrgent = data.rating <= 2 || data.issueType === 'overcharging';
-            const isPositive = data.rating >= 4;
-            
-            const alertCard = document.createElement('div');
-            alertCard.className = `alert-card p-4 border-l-4 ${isUrgent ? 'border-red-500 bg-red-50' : isPositive ? 'border-green-500 bg-green-50' : 'border-yellow-500 bg-yellow-50'} ${animate ? 'pulse-ring' : ''}`;
-            alertCard.id = `alert-${alertId}`;
+            container.innerHTML = feedbacks.map(fb => createAlertCard(fb)).join('');
+        }
+
+        function createAlertCard(fb) {
+            const isUrgent = fb.rating <= 2 || fb.issueType === 'overcharging';
+            const isPositive = fb.rating >= 4;
+            const borderColor = isUrgent ? 'border-red-500' : isPositive ? 'border-green-500' : 'border-yellow-500';
+            const bgColor = isUrgent ? 'bg-red-50' : isPositive ? 'bg-green-50' : 'bg-yellow-50';
+            const badgeColor = isUrgent ? 'bg-red-200 text-red-800' : isPositive ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800';
+            const badgeText = isUrgent ? 'URGENT' : isPositive ? 'POSITIVE' : 'MEDIUM';
             
             const issueLabels = {
-                'overcharging': 'Overcharging',
-                'service': 'Service Issue',
-                'food-quality': 'Food Quality',
-                'availability': 'Not Available',
-                'bill': 'No Bill',
-                'staff-behavior': 'Staff Behavior',
-                'appreciation': 'Appreciation',
-                'other': 'Other'
+                'overcharging': 'Overcharging', 'service': 'Service Issue',
+                'food-quality': 'Food Quality', 'availability': 'Not Available',
+                'bill': 'No Bill', 'staff-behavior': 'Staff Behavior',
+                'appreciation': 'Appreciation', 'other': 'Other'
             };
 
-            alertCard.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div class="flex items-center space-x-2">
-                        <span class="px-2 py-1 rounded text-xs font-bold ${isUrgent ? 'bg-red-200 text-red-800' : isPositive ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}">
-                            ${isUrgent ? 'URGENT' : isPositive ? 'POSITIVE' : 'MEDIUM'}
-                        </span>
-                        <span class="text-xs text-slate-500">${new Date(data.timestamp).toLocaleTimeString()}</span>
+            const time = fb.timestamp ? fb.timestamp.toDate().toLocaleTimeString() : 'Just now';
+            const resolvedClass = fb.status === 'resolved' ? 'opacity-50' : '';
+            const resolvedBadge = fb.status === 'resolved' ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">RESOLVED</span>' : '';
+
+            return `
+                <div class="alert-card p-4 border-l-4 ${borderColor} ${bgColor} ${resolvedClass} hover:shadow-md transition" id="alert-${fb.id}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 rounded text-xs font-bold ${badgeColor}">${badgeText}</span>
+                            ${resolvedBadge}
+                            <span class="text-xs text-slate-500">${time}</span>
+                        </div>
+                        <div class="flex text-yellow-400 text-sm">
+                            ${'★'.repeat(fb.rating)}${'☆'.repeat(5-fb.rating)}
+                        </div>
                     </div>
-                    <div class="flex text-yellow-400 text-sm">
-                        ${'★'.repeat(data.rating)}${'☆'.repeat(5-data.rating)}
+                    <p class="text-sm font-medium text-slate-800 mb-1">${issueLabels[fb.issueType] || fb.issueType}</p>
+                    <p class="text-sm text-slate-600 mb-2">${fb.description}</p>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-slate-500">Coach ${fb.coach} • Seat ${fb.seat}</span>
+                            ${fb.trainNumber ? `<span class="text-xs text-blue-600 ml-2">Train ${fb.trainNumber}</span>` : ''}
+                        </div>
+                        ${fb.status !== 'resolved' ? `
+                            <div class="space-x-2">
+                                <button onclick="openResponseModal('${fb.id}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Respond</button>
+                                <button onclick="quickResolve('${fb.id}')" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Resolve</button>
+                            </div>
+                        ` : ''}
                     </div>
+                    ${fb.photo ? `<img src="${fb.photo}" class="mt-2 w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition" onclick="window.open('${fb.photo}')">` : ''}
                 </div>
-                <p class="text-sm font-medium text-slate-800 mb-1">${issueLabels[data.issueType] || data.issueType}</p>
-                <p class="text-sm text-slate-600 mb-2">${data.description}</p>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-slate-500">Coach ${data.coach} • Seat ${data.seat}</span>
-                    <div class="space-x-2">
-                        <button onclick="openResponseModal(${alertId})" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Respond</button>
-                        <button onclick="resolveAlert(${alertId})" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Resolve</button>
-                    </div>
-                </div>
-                ${data.photo ? `<img src="${data.photo}" class="mt-2 w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition" onclick="window.open('${data.photo}')">` : ''}
             `;
+        }
+
+        function applyFilters() {
+            const trainFilter = document.getElementById('trainFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
             
-            alertsContainer.insertBefore(alertCard, alertsContainer.firstChild);
-            alerts.push({ id: alertId, data, element: alertCard });
+            let filtered = allFeedbacks;
             
-            // Update notification badge
-            const badge = document.getElementById('notificationBadge');
-            badge.textContent = alerts.filter(a => !a.resolved).length;
-            badge.classList.remove('hidden');
+            if (trainFilter !== 'all') {
+                filtered = filtered.filter(f => f.trainNumber === trainFilter);
+            }
+            if (statusFilter !== 'all') {
+                filtered = filtered.filter(f => f.status === statusFilter);
+            }
+            
+            renderAlerts(filtered);
         }
 
         function updateStats() {
-            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
             const today = new Date().toDateString();
-            const todayFeedbacks = feedbacks.filter(f => new Date(f.timestamp).toDateString() === today);
+            const todayFeedbacks = allFeedbacks.filter(f => {
+                if (!f.timestamp) return false;
+                return f.timestamp.toDate().toDateString() === today;
+            });
             
             document.getElementById('totalFeedback').textContent = todayFeedbacks.length;
             
@@ -369,110 +409,170 @@
                 ? (todayFeedbacks.reduce((sum, f) => sum + f.rating, 0) / todayFeedbacks.length).toFixed(1)
                 : '0.0';
             document.getElementById('avgRating').textContent = avg;
-            
-            // Update chart
+
+            // Update resolution rate
+            const resolved = todayFeedbacks.filter(f => f.status === 'resolved').length;
+            const rate = todayFeedbacks.length > 0 ? Math.round((resolved / todayFeedbacks.length) * 100) : 0;
+            document.getElementById('resolutionPercent').textContent = rate + '%';
+            document.getElementById('resolutionBar').style.width = rate + '%';
+            document.getElementById('resolutionLabel').textContent = rate > 80 ? 'Excellent' : rate > 60 ? 'Good' : 'Needs Improvement';
+
+            // Update badge
+            const badge = document.getElementById('notificationBadge');
+            if (pending > 0) {
+                badge.textContent = pending;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function updateCharts() {
+            // Update issues chart
             const categories = ['overcharging', 'service', 'food-quality', 'other'];
-            const counts = categories.map(cat => todayFeedbacks.filter(f => f.issueType === cat).length);
+            const counts = categories.map(cat => allFeedbacks.filter(f => f.issueType === cat).length);
             issuesChart.data.datasets[0].data = counts;
             issuesChart.update();
+
+            // Update hourly chart
+            const hours = Array(12).fill(0);
+            allFeedbacks.forEach(f => {
+                if (f.timestamp) {
+                    const hour = f.timestamp.toDate().getHours();
+                    const slot = Math.floor(hour / 2);
+                    if (slot < 12) hours[slot]++;
+                }
+            });
+            hourlyChart.data.datasets[0].data = hours;
+            hourlyChart.update();
+        }
+
+        function highlightNewAlert(id) {
+            setTimeout(() => {
+                const el = document.getElementById(`alert-${id}`);
+                if (el) el.classList.add('new-alert');
+            }, 100);
         }
 
         function filterAlerts(type) {
             const container = document.getElementById('alertsContainer');
-            const allAlerts = container.querySelectorAll('.alert-card');
+            const cards = container.querySelectorAll('.alert-card');
             
-            allAlerts.forEach(alert => {
-                const isUrgent = alert.classList.contains('border-red-500');
-                const isPositive = alert.classList.contains('border-green-500');
+            cards.forEach(card => {
+                const isUrgent = card.classList.contains('border-red-500');
+                const isPositive = card.classList.contains('border-green-500');
                 
-                if (type === 'all') {
-                    alert.style.display = 'block';
-                } else if (type === 'urgent' && isUrgent) {
-                    alert.style.display = 'block';
-                } else if (type === 'positive' && isPositive) {
-                    alert.style.display = 'block';
-                } else {
-                    alert.style.display = 'none';
-                }
+                if (type === 'all') card.style.display = 'block';
+                else if (type === 'urgent' && isUrgent) card.style.display = 'block';
+                else if (type === 'positive' && isPositive) card.style.display = 'block';
+                else card.style.display = 'none';
             });
         }
 
-        function openResponseModal(alertId) {
-            currentAlertId = alertId;
-            const alert = alerts.find(a => a.id === alertId);
-            document.getElementById('modalIssueText').textContent = alert.data.description;
+        function openResponseModal(docId) {
+            currentDocId = docId;
+            const fb = allFeedbacks.find(f => f.id === docId);
+            document.getElementById('modalIssueText').textContent = fb.description;
+            document.getElementById('modalContactInfo').textContent = fb.customerPhone ? `Contact: ${fb.customerPhone}` : 'No contact provided';
             document.getElementById('responseModal').classList.remove('hidden');
         }
 
         function closeModal() {
             document.getElementById('responseModal').classList.add('hidden');
-            currentAlertId = null;
-        }
-
-        function useTemplate(text) {
-            document.getElementById('responseText').value = text;
+            currentDocId = null;
         }
 
         function sendResponse() {
-            const response = document.getElementById('responseText').value;
-            if (!response.trim()) {
-                alert('Please enter a response');
-                return;
-            }
+            if (!currentDocId) return;
             
-            // In real app, this would send to customer via SMS/WhatsApp
-            alert('Response recorded: ' + response);
-            resolveAlert(currentAlertId);
-            closeModal();
+            const response = document.getElementById('responseText').value;
+            
+            db.collection('feedbacks').doc(currentDocId).update({
+                status: 'resolved',
+                managerResponse: response,
+                resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                closeModal();
+                document.getElementById('responseText').value = '';
+            });
         }
 
-        function resolveAlert(alertId) {
-            const alert = alerts.find(a => a.id === alertId);
-            if (alert) {
-                alert.resolved = true;
-                alert.element.style.opacity = '0.5';
-                alert.element.querySelector('button[onclick^="resolveAlert"]').textContent = 'Resolved';
-                alert.element.querySelector('button[onclick^="resolveAlert"]').disabled = true;
-                alert.element.querySelector('button[onclick^="resolveAlert"]').classList.add('bg-gray-400');
-                
-                // Update storage
-                const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
-                const fb = feedbacks.find(f => f.timestamp === alert.data.timestamp);
-                if (fb) {
-                    fb.status = 'resolved';
-                    localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
-                }
-                
-                updateStats();
+        function quickResolve(docId) {
+            if (confirm('Mark this issue as resolved?')) {
+                db.collection('feedbacks').doc(docId).update({
+                    status: 'resolved',
+                    resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
             }
+        }
+
+        function refreshData() {
+            const icon = document.getElementById('refreshIcon');
+            icon.classList.add('fa-spin');
+            setTimeout(() => icon.classList.remove('fa-spin'), 1000);
+        }
+
+        function exportData() {
+            const csv = [
+                ['Time', 'Train', 'Coach', 'Seat', 'Rating', 'Issue Type', 'Description', 'Status', 'Phone'].join(','),
+                ...allFeedbacks.map(f => [
+                    f.timestamp ? f.timestamp.toDate().toLocaleString() : 'N/A',
+                    f.trainNumber || 'N/A',
+                    f.coach || 'N/A',
+                    f.seat || 'N/A',
+                    f.rating,
+                    f.issueType,
+                    `"${(f.description || '').replace(/"/g, '""')}"`,
+                    f.status,
+                    f.customerPhone || 'N/A'
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `feedback-export-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
         }
 
         function playNotificationSound() {
-            // Simple beep using Web Audio API
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch(e) { console.log('Audio not supported'); }
         }
 
-        // Clear old data (older than 7 days) on load
-        window.addEventListener('load', () => {
-            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
-            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            const recent = feedbacks.filter(f => new Date(f.timestamp) > weekAgo);
-            localStorage.setItem('feedbacks', JSON.stringify(recent));
-        });
+        // Connection status
+        function checkConnection() {
+            const status = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                status.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>Live Sync';
+                status.className = 'status-live text-sm font-medium text-green-600 flex items-center';
+            } else {
+                status.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span>Offline';
+                status.className = 'text-sm font-medium text-red-600 flex items-center';
+            }
+        }
+        
+        window.addEventListener('online', checkConnection);
+        window.addEventListener('offline', checkConnection);
+
+        // Start
+        startListening();
     </script>
 </body>
 </html>

@@ -10,58 +10,40 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         * { font-family: 'Inter', sans-serif; }
         
-        .qr-scan {
-            position: relative;
-            overflow: hidden;
-        }
-        .qr-scan::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: #10b981;
-            box-shadow: 0 0 10px #10b981;
-            animation: scan 2s linear infinite;
-        }
-        @keyframes scan {
-            0% { top: 0; }
-            100% { top: 100%; }
-        }
+        .star-rating { direction: rtl; display: inline-flex; }
+        .star-rating input { display: none; }
+        .star-rating label { color: #d1d5db; font-size: 2rem; padding: 0 0.1rem; cursor: pointer; transition: color 0.2s; }
+        .star-rating input:checked ~ label, .star-rating label:hover, .star-rating label:hover ~ label { color: #fbbf24; }
         
-        .star-rating {
-            direction: rtl;
-            display: inline-flex;
-        }
-        .star-rating input {
-            display: none;
-        }
-        .star-rating label {
-            color: #d1d5db;
-            font-size: 2rem;
-            padding: 0 0.1rem;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .star-rating input:checked ~ label,
-        .star-rating label:hover,
-        .star-rating label:hover ~ label {
-            color: #fbbf24;
-        }
+        .success-animation { animation: successPop 0.5s ease-out; }
+        @keyframes successPop { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
         
-        .success-animation {
-            animation: successPop 0.5s ease-out;
-        }
-        @keyframes successPop {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 min-h-screen">
     
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // REPLACE THIS WITH YOUR ACTUAL FIREBASE CONFIG
+        const firebaseConfig = {
+  apiKey: "AIzaSyDMcHok-Q-w6a0BwG2w1sFvSxQwgTXlnUg",
+  authDomain: "rk-group-feedback.firebaseapp.com",
+  projectId: "rk-group-feedback",
+  storageBucket: "rk-group-feedback.firebasestorage.app",
+  messagingSenderId: "89598658685",
+  appId: "1:89598658685:web:398d8a06db8bea367ec914"
+};
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+
     <!-- Header -->
     <div class="bg-white shadow-lg">
         <div class="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
@@ -97,6 +79,12 @@
                 <i class="fas fa-route text-blue-500"></i>
                 <span id="routeInfo">Loading route information...</span>
             </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg flex items-center justify-center">
+            <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+            <span class="text-sm text-green-800 font-medium">Connected to Cloud</span>
         </div>
 
         <!-- Feedback Form -->
@@ -143,6 +131,12 @@
                 <textarea id="description" rows="4" class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" placeholder="Please describe your experience in detail..."></textarea>
             </div>
 
+            <!-- Customer Phone (Optional - for follow-up) -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Your Phone (Optional)</label>
+                <input type="tel" id="customerPhone" class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="For us to contact you if needed">
+            </div>
+
             <!-- Photo Upload -->
             <div class="mb-6">
                 <label class="block text-sm font-medium text-slate-700 mb-2">Attach Photo (Optional)</label>
@@ -158,9 +152,9 @@
             </div>
 
             <!-- Submit Button -->
-            <button onclick="submitFeedback()" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex items-center justify-center space-x-2">
-                <i class="fas fa-paper-plane"></i>
-                <span>Submit Feedback</span>
+            <button onclick="submitFeedback()" id="submitBtn" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex items-center justify-center space-x-2">
+                <span id="btnText">Submit Feedback</span>
+                <div id="btnLoading" class="loading hidden"></div>
             </button>
 
             <!-- WhatsApp Alternative -->
@@ -173,7 +167,7 @@
             </div>
         </div>
 
-        <!-- Success Message (Hidden by default) -->
+        <!-- Success Message -->
         <div id="successMessage" class="hidden bg-white rounded-2xl shadow-xl p-8 text-center success-animation">
             <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <i class="fas fa-check-circle text-4xl text-green-600"></i>
@@ -188,6 +182,13 @@
                 Submit another feedback
             </button>
         </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 text-center mt-4">
+            <i class="fas fa-exclamation-circle text-3xl text-red-500 mb-2"></i>
+            <p class="text-red-800 font-medium">Failed to submit. Please check your internet connection and try again.</p>
+            <button onclick="submitFeedback()" class="mt-3 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700">Retry</button>
+        </div>
     </div>
 
     <script>
@@ -197,12 +198,10 @@
         const coach = urlParams.get('coach') || 'S4';
         const seat = urlParams.get('seat') || '42';
         
-        // Set page info
         document.getElementById('trainNumber').textContent = trainNo;
         document.getElementById('coachInfo').textContent = `${coach} / Seat ${seat}`;
         document.getElementById('routeInfo').textContent = getRouteInfo(trainNo);
         
-        // Update time
         function updateTime() {
             const now = new Date();
             document.getElementById('currentTime').textContent = now.toLocaleString('en-IN', {
@@ -221,10 +220,27 @@
             return routes[trainNo] || 'Indian Railways';
         }
 
-        // Photo upload handler
+        // Check connection status
+        function checkConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span><span class="text-sm text-green-800 font-medium">Connected to Cloud</span>';
+                statusDiv.className = 'mb-4 p-3 bg-green-100 border border-green-300 rounded-lg flex items-center justify-center';
+            } else {
+                statusDiv.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span><span class="text-sm text-red-800 font-medium">Offline - Will sync when online</span>';
+                statusDiv.className = 'mb-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-center justify-center';
+            }
+        }
+        window.addEventListener('online', checkConnection);
+        window.addEventListener('offline', checkConnection);
+
         let uploadedPhoto = null;
         function handlePhotoUpload(input) {
             if (input.files && input.files[0]) {
+                if (input.files[0].size > 500000) { // 500KB limit
+                    alert('Photo too large. Please choose a smaller image (max 500KB).');
+                    return;
+                }
                 uploadedPhoto = input.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -241,26 +257,21 @@
             document.getElementById('photoPreview').classList.add('hidden');
         }
 
-        // Submit feedback
         async function submitFeedback() {
             const rating = document.querySelector('input[name="rating"]:checked')?.value;
             const issueType = document.getElementById('issueType').value;
             const description = document.getElementById('description').value;
+            const customerPhone = document.getElementById('customerPhone').value;
 
-            if (!rating) {
-                alert('Please select a star rating');
-                return;
-            }
-            if (!issueType) {
-                alert('Please select feedback type');
-                return;
-            }
-            if (!description.trim()) {
-                alert('Please provide a description');
-                return;
-            }
+            if (!rating) { alert('Please select a star rating'); return; }
+            if (!issueType) { alert('Please select feedback type'); return; }
+            if (!description.trim()) { alert('Please provide a description'); return; }
 
-            // Prepare data
+            // Show loading
+            document.getElementById('btnText').textContent = 'Submitting...';
+            document.getElementById('btnLoading').classList.remove('hidden');
+            document.getElementById('submitBtn').disabled = true;
+
             const feedbackData = {
                 trainNumber: trainNo,
                 coach: coach,
@@ -268,18 +279,33 @@
                 rating: parseInt(rating),
                 issueType: issueType,
                 description: description,
-                timestamp: new Date().toISOString(),
+                customerPhone: customerPhone,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 status: 'new',
-                photo: uploadedPhoto ? await convertToBase64(uploadedPhoto) : null
+                deviceTime: new Date().toISOString()
             };
 
-            // Save to localStorage (simulating database)
-            saveFeedback(feedbackData);
+            if (uploadedPhoto) {
+                feedbackData.photo = await convertToBase64(uploadedPhoto);
+            }
 
-            // Show success
-            document.getElementById('feedbackForm').classList.add('hidden');
-            document.getElementById('successMessage').classList.remove('hidden');
-            document.getElementById('refId').textContent = '#RK' + Date.now().toString().slice(-8);
+            try {
+                // Save to Firebase
+                const docRef = await db.collection('feedbacks').add(feedbackData);
+                
+                // Show success
+                document.getElementById('feedbackForm').classList.add('hidden');
+                document.getElementById('successMessage').classList.remove('hidden');
+                document.getElementById('refId').textContent = '#' + docRef.id.slice(-8).toUpperCase();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').classList.remove('hidden');
+            } finally {
+                document.getElementById('btnText').textContent = 'Submit Feedback';
+                document.getElementById('btnLoading').classList.add('hidden');
+                document.getElementById('submitBtn').disabled = false;
+            }
         }
 
         function convertToBase64(file) {
@@ -290,25 +316,17 @@
             });
         }
 
-        function saveFeedback(data) {
-            let feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
-            feedbacks.push(data);
-            localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
-            
-            // Trigger notification to manager (in real app, this would be a push notification)
-            localStorage.setItem('newFeedback', JSON.stringify(data));
-        }
-
         function resetForm() {
             document.getElementById('feedbackForm').classList.remove('hidden');
             document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
             document.getElementById('issueType').value = '';
             document.getElementById('description').value = '';
+            document.getElementById('customerPhone').value = '';
             document.querySelectorAll('input[name="rating"]').forEach(r => r.checked = false);
             removePhoto();
         }
 
-        // WhatsApp link setup
         const whatsappMsg = encodeURIComponent(`Hello RK Group, I need assistance regarding Train ${trainNo}, Coach ${coach}, Seat ${seat}`);
         document.getElementById('whatsappLink').href = `https://wa.me/919999999999?text=${whatsappMsg}`;
     </script>
