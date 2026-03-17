@@ -1,5 +1,4 @@
-
-html_content = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -11,10 +10,8 @@ html_content = '''<!DOCTYPE html>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* Mobile-optimized touch targets */
         .touch-target { min-height: 48px; }
         
-        /* Offline indicator */
         .offline-banner {
             background: #f59e0b;
             color: white;
@@ -32,7 +29,6 @@ html_content = '''<!DOCTYPE html>
         }
         .offline-banner.show { transform: translateY(0); }
         
-        /* Item card selection */
         .item-card {
             transition: all 0.2s;
             border: 2px solid transparent;
@@ -43,7 +39,6 @@ html_content = '''<!DOCTYPE html>
             background: #eff6ff;
         }
         
-        /* Quantity selector */
         .qty-btn {
             width: 32px;
             height: 32px;
@@ -56,7 +51,6 @@ html_content = '''<!DOCTYPE html>
         }
         .qty-btn:active { transform: scale(0.9); }
         
-        /* Bill animation */
         .bill-sent {
             animation: slideUp 0.5s ease-out;
         }
@@ -65,7 +59,6 @@ html_content = '''<!DOCTYPE html>
             to { transform: translateY(0); opacity: 1; }
         }
         
-        /* Staff login overlay */
         .login-overlay {
             position: fixed;
             inset: 0;
@@ -76,14 +69,12 @@ html_content = '''<!DOCTYPE html>
             justify-content: center;
         }
         
-        /* Scrollable menu area */
         .menu-scroll {
             max-height: calc(100vh - 280px);
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
         
-        /* Hide scrollbar */
         .menu-scroll::-webkit-scrollbar { display: none; }
         .menu-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -139,6 +130,9 @@ html_content = '''<!DOCTYPE html>
                         </div>
                     </div>
                     <div class="flex items-center space-x-3">
+                        <button onclick="viewPending()" class="text-slate-400 hover:text-blue-500 transition mr-3">
+                            <i class="fas fa-sync-alt text-lg"></i>
+                        </button>
                         <div id="syncStatus" class="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg">
                             <i class="fas fa-check-circle mr-1"></i>Synced
                         </div>
@@ -242,7 +236,7 @@ html_content = '''<!DOCTYPE html>
     <div id="pendingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center">
-                <h3 class="font-bold text-slate-800">Pending Sales (<span id="pendingCount">0</span>)</h3>
+                <h3 class="font-bold text-slate-800">Pending Sales (<span id="pendingCountModal">0</span>)</h3>
                 <button onclick="closePendingModal()" class="text-slate-400 hover:text-slate-600">
                     <i class="fas fa-times text-xl"></i>
                 </button>
@@ -359,8 +353,8 @@ html_content = '''<!DOCTYPE html>
         function showMainApp() {
             document.getElementById('loginOverlay').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
-            document.getElementById('displayStaff').textContent = `Staff: ${staffId}`;
-            document.getElementById('displayTrain').textContent = `Train ${trainNumber}`;
+            document.getElementById('displayStaff').textContent = 'Staff: ' + staffId;
+            document.getElementById('displayTrain').textContent = 'Train ' + trainNumber;
             updateTodayStats();
         }
 
@@ -391,9 +385,13 @@ html_content = '''<!DOCTYPE html>
             updateOrderDisplay();
             
             // Visual feedback
-            const card = event.currentTarget;
-            card.classList.add('selected');
-            setTimeout(() => card.classList.remove('selected'), 200);
+            const cards = document.querySelectorAll('.item-card');
+            cards.forEach(card => {
+                if (card.innerHTML.includes(item.name)) {
+                    card.classList.add('selected');
+                    setTimeout(() => card.classList.remove('selected'), 200);
+                }
+            });
         }
 
         // Update Order Display
@@ -482,11 +480,11 @@ html_content = '''<!DOCTYPE html>
             const transactionId = 'TXN' + Date.now().toString().slice(-8);
             
             const saleData = {
-                transactionId,
-                staffId,
-                trainNumber,
+                transactionId: transactionId,
+                staffId: staffId,
+                trainNumber: trainNumber,
                 items: [...currentOrder],
-                total,
+                total: total,
                 customerPhone: phone,
                 timestamp: new Date().toISOString(),
                 synced: false
@@ -522,7 +520,6 @@ html_content = '''<!DOCTYPE html>
 
         function sendSMS(saleData) {
             // In real implementation, this would call your SMS API
-            // For now, we simulate and log
             console.log('SMS would be sent to:', saleData.customerPhone);
             console.log('Message:', generateSMSMessage(saleData));
             
@@ -537,8 +534,8 @@ html_content = '''<!DOCTYPE html>
         }
 
         function generateSMSMessage(saleData) {
-            const items = saleData.items.map(i => `${i.name}x${i.qty}=₹${i.total}`).join(', ');
-            return `RK Group-IR: Thank you! Your purchase of ₹${saleData.total} (${items}) has been recorded. Txn:${saleData.transactionId}. Feedback? Scan QR on your seat.`;
+            const items = saleData.items.map(i => i.name + 'x' + i.qty + '=₹' + i.total).join(', ');
+            return 'RK Group-IR: Thank you! Your purchase of ₹' + saleData.total + ' (' + items + ') has been recorded. Txn:' + saleData.transactionId + '. Feedback? Scan QR on your seat.';
         }
 
         function closeBillModal() {
@@ -559,11 +556,11 @@ html_content = '''<!DOCTYPE html>
             const transactionId = 'TXN' + Date.now().toString().slice(-8);
             
             const saleData = {
-                transactionId,
-                staffId,
-                trainNumber,
+                transactionId: transactionId,
+                staffId: staffId,
+                trainNumber: trainNumber,
                 items: [...currentOrder],
-                total,
+                total: total,
                 customerPhone: document.getElementById('customerPhone').value || 'N/A',
                 timestamp: new Date().toISOString(),
                 synced: false,
@@ -631,7 +628,7 @@ html_content = '''<!DOCTYPE html>
         // View Pending Sales
         function viewPending() {
             const pending = JSON.parse(localStorage.getItem('pendingSales') || '[]');
-            document.getElementById('pendingCount').textContent = pending.length;
+            document.getElementById('pendingCountModal').textContent = pending.length;
             
             const list = document.getElementById('pendingList');
             if (pending.length === 0) {
@@ -676,36 +673,36 @@ html_content = '''<!DOCTYPE html>
                 closePendingModal();
                 alert('All sales synced successfully!');
                 updateTodayStats();
+                btn.innerHTML = '<i class="fas fa-sync mr-2"></i>Sync All Now';
+                btn.disabled = false;
             }, 1500);
         }
 
-        // Add sync button to header
-        document.addEventListener('DOMContentLoaded', () => {
-            const header = document.querySelector('.bg-white.shadow-sm.sticky');
-            const syncBtn = document.createElement('button');
-            syncBtn.className = 'text-slate-400 hover:text-blue-500 transition mr-3';
-            syncBtn.innerHTML = '<i class="fas fa-sync-alt text-lg"></i>';
-            syncBtn.onclick = viewPending;
-            header.querySelector('.flex.items-center.space-x-3').appendChild(syncBtn);
-        });
-
-        // Keyboard shortcuts for fast selling
-        document.addEventListener('keydown', (e) => {
-            if (document.getElementById('mainApp').classList.contains('hidden')) return;
-            
-            // Number keys 1-9 for quick add
-            if (e.key >= '1' && e.key <= '9') {
-                const idx = parseInt(e.key) - 1;
-                if (menuItems[idx]) {
-                    addToOrder(menuItems[idx].id);
+        function syncOne(idx) {
+            if (!isOnline) {
+                alert('You are offline. Please connect to internet to sync.');
+                return;
+            }
+            let pending = JSON.parse(localStorage.getItem('pendingSales') || '[]');
+            if (pending[idx]) {
+                let sale = pending[idx];
+                sale.synced = true;
+                if (sale.smsPending && sale.customerPhone !== 'N/A') {
+                    sendSMS(sale);
                 }
+                
+                let completed = JSON.parse(localStorage.getItem('completedSales') || '[]');
+                completed.push(sale);
+                localStorage.setItem('completedSales', JSON.stringify(completed));
+                
+                pending.splice(idx, 1);
+                localStorage.setItem('pendingSales', JSON.stringify(pending));
+                
+                viewPending();
+                updateTodayStats();
+                alert('Sale synced!');
             }
-            
-            // Enter to generate bill
-            if (e.key === 'Enter' && e.ctrlKey) {
-                generateBill();
-            }
-        });
+        }
 
         // Clear old data (keep last 30 days)
         function cleanupOldData() {
@@ -722,20 +719,4 @@ html_content = '''<!DOCTYPE html>
         cleanupOldData();
     </script>
 </body>
-</html>'''
-
-# Save to file
-with open('/mnt/kimi/output/staff-sales-app.html', 'w', encoding='utf-8') as f:
-    f.write(html_content)
-
-print("✅ Staff Sales App created successfully!")
-print("📁 File saved to: /mnt/kimi/output/staff-sales-app.html")
-print("\n📱 App Features:")
-print("   • Staff login with ID and Train Number")
-print("   • Grid menu with 12 items (Water, Thali, Biryani, Tea, etc.)")
-print("   • Quantity controls (+/-) for each item")
-print("   • Customer phone input for SMS bill")
-print("   • Offline mode support")
-print("   • Auto-sync when online")
-print("   • Today's sales stats")
-print("   • Keyboard shortcuts (1-9 for quick add)")
+</html>
