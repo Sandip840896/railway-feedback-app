@@ -6,46 +6,74 @@
     <title>RK Group - Manager Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; }
         
-        .pulse-ring { position: relative; }
-        .pulse-ring::before { content: ''; position: absolute; inset: -4px; border-radius: inherit; border: 2px solid #ef4444; animation: pulseRing 2s ease-out infinite; }
-        @keyframes pulseRing { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+        .pulse-ring {
+            position: relative;
+        }
+        .pulse-ring::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: inherit;
+            border: 2px solid #ef4444;
+            animation: pulseRing 2s ease-out infinite;
+        }
+        @keyframes pulseRing {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
         
-        .alert-card { animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .alert-card {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
         
-        .status-live::before { content: ''; display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 6px; animation: livePulse 2s infinite; }
-        @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .status-live::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: livePulse 2s infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
         
-        .new-alert { animation: highlight 2s ease-out; }
-        @keyframes highlight { 0% { background-color: #fef3c7; } 100% { background-color: transparent; } }
+        .sale-card {
+            animation: salePop 0.4s ease-out;
+        }
+        @keyframes salePop {
+            0% { transform: scale(0.9); opacity: 0; }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); opacity: 1; }
+        }
         
-        .chart-container { position: relative; height: 200px; width: 100%; }
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+        }
     </style>
 </head>
 <body class="bg-slate-100">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
-    <script>
-        const firebaseConfig = {
-    apiKey: "AIzaSyDMcHok-Q-w6a0BwG2w1sFvSxQwgTXlnUg",
-    authDomain: "rk-group-feedback.firebaseapp.com",
-    projectId: "rk-group-feedback",
-    storageBucket: "rk-group-feedback.firebasestorage.app",
-    messagingSenderId: "89598658685",
-    appId: "1:89598658685:web:398d8a06db8bea367ec914"
-  };
-        
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-    </script>
-
     <!-- Navigation -->
     <nav class="bg-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,160 +82,283 @@
                     <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">RK</div>
                     <div>
                         <h1 class="font-bold text-slate-800 text-lg">Manager Dashboard</h1>
-                        <p class="text-xs text-slate-500">Cloud Connected • Real-time</p>
+                        <p class="text-xs text-slate-500">Real-time Monitoring & Sales</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <span class="status-live text-sm font-medium text-green-600 flex items-center" id="connectionStatus">
-                        Live Sync
+                    <span class="status-live text-sm font-medium text-green-600 flex items-center">
+                        Live Monitoring
                     </span>
                     <div class="relative">
                         <i class="fas fa-bell text-slate-600 text-xl cursor-pointer hover:text-blue-600 transition"></i>
                         <span id="notificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
                     </div>
-                    <button onclick="refreshData()" class="p-2 text-slate-600 hover:text-blue-600 transition" title="Refresh">
-                        <i class="fas fa-sync-alt" id="refreshIcon"></i>
-                    </button>
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-blue-600"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Stats Row -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-slate-500 mb-1">Total Feedback Today</p>
-                        <p class="text-2xl font-bold text-slate-800" id="totalFeedback">0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-comments text-blue-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-slate-500 mb-1">Urgent Issues</p>
-                        <p class="text-2xl font-bold text-slate-800" id="urgentCount">0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-slate-500 mb-1">Pending Response</p>
-                        <p class="text-2xl font-bold text-slate-800" id="pendingCount">0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-clock text-yellow-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-slate-500 mb-1">Avg Rating</p>
-                        <p class="text-2xl font-bold text-slate-800" id="avgRating">0.0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-star text-green-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="flex items-center space-x-2">
-                    <label class="text-sm font-medium text-slate-700">Train:</label>
-                    <select id="trainFilter" onchange="applyFilters()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="all">All Trains</option>
-                        <option value="12649">12649 - YPR Express</option>
-                        <option value="12628">12628 - Karnataka Exp</option>
-                    </select>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <label class="text-sm font-medium text-slate-700">Status:</label>
-                    <select id="statusFilter" onchange="applyFilters()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="all">All</option>
-                        <option value="new">New</option>
-                        <option value="resolved">Resolved</option>
-                    </select>
-                </div>
-                <div class="flex-1"></div>
-                <button onclick="exportData()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition flex items-center space-x-2">
-                    <i class="fas fa-download"></i>
-                    <span>Export CSV</span>
+        
+        <!-- Tab Navigation -->
+        <div class="bg-white rounded-xl shadow-sm mb-6">
+            <div class="flex border-b border-slate-200">
+                <button onclick="switchTab('overview')" id="tab-overview" class="tab-active flex-1 py-4 text-sm font-medium text-slate-600 hover:text-slate-800 transition">
+                    <i class="fas fa-chart-line mr-2"></i>Sales Overview
+                </button>
+                <button onclick="switchTab('feedback')" id="tab-feedback" class="flex-1 py-4 text-sm font-medium text-slate-600 hover:text-slate-800 transition">
+                    <i class="fas fa-comments mr-2"></i>Customer Feedback
+                </button>
+                <button onclick="switchTab('staff')" id="tab-staff" class="flex-1 py-4 text-sm font-medium text-slate-600 hover:text-slate-800 transition">
+                    <i class="fas fa-users mr-2"></i>Staff Performance
                 </button>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Alerts Feed -->
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                        <h2 class="text-lg font-bold text-slate-800 flex items-center">
-                            <i class="fas fa-bell text-red-500 mr-2"></i>
-                            Live Alerts
-                        </h2>
-                        <div class="flex space-x-2">
-                            <button onclick="filterAlerts('all')" class="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">All</button>
-                            <button onclick="filterAlerts('urgent')" class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">Urgent</button>
-                            <button onclick="filterAlerts('positive')" class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">Positive</button>
+        <!-- SALES OVERVIEW TAB -->
+        <div id="content-overview" class="tab-content">
+            <!-- Sales Stats Row -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="metric-card bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Today's Revenue</p>
+                            <p class="text-2xl font-bold text-slate-800" id="todayRevenue">₹0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-rupee-sign text-green-600 text-xl"></i>
                         </div>
                     </div>
-                    <div id="alertsContainer" class="divide-y divide-slate-200 max-h-[600px] overflow-y-auto">
-                        <div class="p-8 text-center text-slate-400">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                            <p>Connecting to cloud database...</p>
+                    <p class="text-xs text-green-600 mt-2" id="revenueTrend">↑ 12% vs yesterday</p>
+                </div>
+                
+                <div class="metric-card bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Total Sales</p>
+                            <p class="text-2xl font-bold text-slate-800" id="totalSales">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-shopping-cart text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-blue-600 mt-2">Transactions today</p>
+                </div>
+                
+                <div class="metric-card bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Avg Order Value</p>
+                            <p class="text-2xl font-bold text-slate-800" id="avgOrderValue">₹0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-receipt text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-purple-600 mt-2">Per transaction</p>
+                </div>
+                
+                <div class="metric-card bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Top Selling</p>
+                            <p class="text-lg font-bold text-slate-800" id="topSellingItem">-</p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-trophy text-orange-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-orange-600 mt-2">Most popular today</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Live Sales Feed -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                                <i class="fas fa-bolt text-yellow-500 mr-2"></i>
+                                Live Sales Feed
+                            </h2>
+                            <div class="flex space-x-2">
+                                <select id="trainFilter" onchange="filterSales()" class="text-sm border border-slate-300 rounded-lg px-3 py-1">
+                                    <option value="all">All Trains</option>
+                                    <option value="12649">12649 - YPR Express</option>
+                                    <option value="12628">12628 - Karnataka Exp</option>
+                                </select>
+                                <button onclick="refreshSales()" class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="salesContainer" class="divide-y divide-slate-200 max-h-96 overflow-y-auto">
+                            <div class="p-8 text-center text-slate-400">
+                                <i class="fas fa-shopping-bag text-4xl mb-2"></i>
+                                <p>No sales yet. Waiting for staff transactions...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Items Chart -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Top Selling Items</h3>
+                        <canvas id="topItemsChart" height="200"></canvas>
+                    </div>
+                    
+                    <!-- Hourly Sales Chart -->
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Hourly Sales</h3>
+                        <canvas id="hourlyChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Performance Table -->
+            <div class="mt-8 bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800">Staff Performance Today</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-600">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">Staff ID</th>
+                                <th class="px-4 py-3 text-left font-medium">Train</th>
+                                <th class="px-4 py-3 text-right font-medium">Sales Count</th>
+                                <th class="px-4 py-3 text-right font-medium">Revenue</th>
+                                <th class="px-4 py-3 text-right font-medium">Avg Order</th>
+                                <th class="px-4 py-3 text-center font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffTableBody" class="divide-y divide-slate-200">
+                            <!-- Staff rows generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEEDBACK TAB (Original Content) -->
+        <div id="content-feedback" class="tab-content hidden">
+            <!-- Stats Row -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Total Feedback Today</p>
+                            <p class="text-2xl font-bold text-slate-800" id="totalFeedback">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-comments text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Urgent Issues</p>
+                            <p class="text-2xl font-bold text-slate-800" id="urgentCount">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Pending Response</p>
+                            <p class="text-2xl font-bold text-slate-800" id="pendingCount">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Avg Rating</p>
+                            <p class="text-2xl font-bold text-slate-800" id="avgRating">0.0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-star text-green-600 text-xl"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sidebar -->
-            <div class="space-y-6">
-                <!-- Analytics -->
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Today's Issues</h3>
-                    <div class="chart-container">
-                        <canvas id="issuesChart"></canvas>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Alerts Feed -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                                <i class="fas fa-bell text-red-500 mr-2"></i>
+                                Live Alerts
+                            </h2>
+                            <div class="flex space-x-2">
+                                <button onclick="filterAlerts('all')" class="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">All</button>
+                                <button onclick="filterAlerts('urgent')" class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">Urgent</button>
+                                <button onclick="filterAlerts('positive')" class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">Positive</button>
+                            </div>
+                        </div>
+                        <div id="alertsContainer" class="divide-y divide-slate-200 max-h-96 overflow-y-auto">
+                            <div class="p-8 text-center text-slate-400">
+                                <i class="fas fa-inbox text-4xl mb-2"></i>
+                                <p>No alerts yet. Waiting for customer feedback...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Hourly Trend -->
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Hourly Activity</h3>
-                    <div class="chart-container" style="height: 150px;">
-                        <canvas id="hourlyChart"></canvas>
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Today's Issues</h3>
+                        <canvas id="issuesChart" height="200"></canvas>
                     </div>
-                </div>
 
-                <!-- Performance -->
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Resolution Rate</h3>
-                    <div class="relative pt-1">
-                        <div class="flex mb-2 items-center justify-between">
-                            <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200" id="resolutionLabel">Excellent</span>
-                            <span class="text-xs font-semibold inline-block text-green-600" id="resolutionPercent">0%</span>
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Resolution Rate</h3>
+                        <div class="relative pt-1">
+                            <div class="flex mb-2 items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">
+                                        Excellent
+                                    </span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-semibold inline-block text-green-600">
+                                        94%
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
+                                <div style="width:94%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"></div>
+                            </div>
+                            <p class="text-xs text-slate-500">Issues resolved before IRCTC escalation</p>
                         </div>
-                        <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
-                            <div id="resolutionBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
-                        </div>
-                        <p class="text-xs text-slate-500">Issues resolved before escalation</p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- STAFF TAB -->
+        <div id="content-staff" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow-md p-8 text-center">
+                <i class="fas fa-users-cog text-6xl text-slate-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">Staff Management</h3>
+                <p class="text-slate-500">Detailed staff analytics and shift management coming soon...</p>
             </div>
         </div>
     </div>
@@ -217,71 +368,198 @@
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 class="text-lg font-bold text-slate-800 mb-4">Respond to Customer</h3>
             <div class="mb-4 p-3 bg-slate-50 rounded-lg">
-                <p class="text-sm text-slate-600 mb-1">Issue:</p>
+                <p class="text-sm text-slate-600 mb-1">Original Issue:</p>
                 <p class="text-sm font-medium text-slate-800" id="modalIssueText">Loading...</p>
-                <p class="text-xs text-slate-500 mt-1" id="modalContactInfo"></p>
             </div>
             <textarea id="responseText" rows="4" class="w-full border border-slate-300 rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Type your response..."></textarea>
             <div class="flex space-x-3">
                 <button onclick="closeModal()" class="flex-1 py-3 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition">Cancel</button>
-                <button onclick="sendResponse()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">Mark Resolved</button>
+                <button onclick="sendResponse()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">Send Response</button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentDocId = null;
-        let allFeedbacks = [];
-        let issuesChart = null;
+        // Global Variables
+        let currentAlertId = null;
+        let alerts = [];
+        let sales = [];
+        let topItemsChart = null;
         let hourlyChart = null;
-        
-        // Initialize charts when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            initCharts();
-            startListening();
-        });
-        
-        function initCharts() {
-            // Issues Chart
-            const issuesCtx = document.getElementById('issuesChart').getContext('2d');
-            issuesChart = new Chart(issuesCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Overcharging', 'Service', 'Food Quality', 'Bill Issue', 'Others'],
-                    datasets: [{
-                        data: [0, 0, 0, 0, 0],
-                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#8b5cf6', '#6b7280'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { 
-                                boxWidth: 12, 
-                                font: { size: 10 },
-                                padding: 10
-                            } 
-                        } 
-                    }
-                }
-            });
+        let issuesChart = null;
 
-            // Hourly Chart
-            const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
-            hourlyChart = new Chart(hourlyCtx, {
+        // Initialize
+        window.addEventListener('load', () => {
+            initCharts();
+            loadAllFeedback();
+            loadAllSales();
+            updateSalesStats();
+            updateFeedbackStats();
+            
+            // Check for new data every 3 seconds
+            setInterval(() => {
+                checkNewFeedback();
+                checkNewSales();
+            }, 3000);
+        });
+
+        // Tab Switching
+        function switchTab(tabName) {
+            // Hide all content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                btn.classList.remove('tab-active');
+            });
+            
+            // Show selected content
+            document.getElementById('content-' + tabName).classList.remove('hidden');
+            
+            // Activate selected tab
+            document.getElementById('tab-' + tabName).classList.add('tab-active');
+            
+            // Refresh charts if needed
+            if (tabName === 'overview') {
+                updateSalesStats();
+            }
+        }
+
+        // ==================== SALES FUNCTIONS ====================
+
+        function checkNewSales() {
+            const allSales = JSON.parse(localStorage.getItem('sales') || '[]');
+            const newSales = allSales.filter(s => !s.viewed && !sales.find(existing => existing.transactionId === s.transactionId));
+            
+            if (newSales.length > 0) {
+                newSales.forEach(sale => {
+                    sale.viewed = true;
+                    addSaleToDisplay(sale);
+                });
+                localStorage.setItem('sales', JSON.stringify(allSales));
+                updateSalesStats();
+                playNotificationSound();
+            }
+        }
+
+        function loadAllSales() {
+            const allSales = JSON.parse(localStorage.getItem('sales') || '[]');
+            const today = new Date().toDateString();
+            sales = allSales.filter(s => new Date(s.timestamp).toDateString() === today);
+            
+            // Sort by time (newest first)
+            sales.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // Display last 20 sales
+            const container = document.getElementById('salesContainer');
+            if (sales.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-slate-400">
+                        <i class="fas fa-shopping-bag text-4xl mb-2"></i>
+                        <p>No sales yet today. Waiting for staff transactions...</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '';
+                sales.slice(0, 20).forEach(sale => addSaleToDisplay(sale, false));
+            }
+            
+            updateSalesStats();
+        }
+
+        function addSaleToDisplay(sale, animate = true) {
+            const container = document.getElementById('salesContainer');
+            
+            // Remove "no sales" message if present
+            if (container.children.length === 1 && container.querySelector('.fa-shopping-bag')) {
+                container.innerHTML = '';
+            }
+
+            const saleCard = document.createElement('div');
+            saleCard.className = `sale-card p-4 border-l-4 border-green-500 bg-green-50 ${animate ? 'pulse-ring' : ''}`;
+            
+            const itemsList = sale.items.map(i => i.name + ' x' + i.qty).join(', ');
+            
+            saleCard.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-xs font-bold text-green-600 bg-green-200 px-2 py-1 rounded">SALE</span>
+                        <span class="text-xs text-slate-400 ml-2">${new Date(sale.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <span class="text-lg font-bold text-slate-800">₹${sale.total}</span>
+                </div>
+                <p class="text-sm text-slate-700 font-medium">${itemsList}</p>
+                <div class="flex items-center justify-between mt-2">
+                    <div class="text-xs text-slate-500">
+                        <span class="font-medium">${sale.staffId}</span> • Train ${sale.trainNumber}
+                    </div>
+                    <div class="text-xs text-slate-500">
+                        <i class="fas fa-phone mr-1"></i>${sale.customerPhone}
+                    </div>
+                </div>
+            `;
+            
+            container.insertBefore(saleCard, container.firstChild);
+            
+            // Keep only last 50 sales in view
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function updateSalesStats() {
+            const today = new Date().toDateString();
+            const allSales = JSON.parse(localStorage.getItem('sales') || '[]');
+            const todaySales = allSales.filter(s => new Date(s.timestamp).toDateString() === today);
+            
+            // Revenue
+            const totalRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
+            document.getElementById('todayRevenue').textContent = '₹' + totalRevenue.toLocaleString('en-IN');
+            
+            // Total sales count
+            document.getElementById('totalSales').textContent = todaySales.length;
+            
+            // Avg order value
+            const avgOrder = todaySales.length > 0 ? Math.round(totalRevenue / todaySales.length) : 0;
+            document.getElementById('avgOrderValue').textContent = '₹' + avgOrder.toLocaleString('en-IN');
+            
+            // Top selling item
+            const itemCounts = {};
+            todaySales.forEach(sale => {
+                sale.items.forEach(item => {
+                    itemCounts[item.name] = (itemCounts[item.name] || 0) + item.qty;
+                });
+            });
+            const topItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topSellingItem').textContent = topItem ? topItem[0] : '-';
+            
+            // Update charts
+            updateTopItemsChart(itemCounts);
+            updateHourlyChart(todaySales);
+            updateStaffTable(todaySales);
+        }
+
+        function updateTopItemsChart(itemCounts) {
+            const ctx = document.getElementById('topItemsChart');
+            if (!ctx) return;
+            
+            const sorted = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            
+            if (topItemsChart) {
+                topItemsChart.destroy();
+            }
+            
+            topItemsChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM', '10PM', '12AM'],
+                    labels: sorted.map(i => i[0].split(' ')[0]),
                     datasets: [{
-                        label: 'Complaints',
-                        data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 4
+                        label: 'Quantity Sold',
+                        data: sorted.map(i => i[1]),
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'],
+                        borderRadius: 6
                     }]
                 },
                 options: {
@@ -296,133 +574,227 @@
             });
         }
 
-        function startListening() {
-            db.collection('feedbacks')
-                .orderBy('timestamp', 'desc')
-                .onSnapshot((snapshot) => {
-                    allFeedbacks = [];
-                    snapshot.forEach((doc) => {
-                        allFeedbacks.push({ id: doc.id, ...doc.data() });
-                    });
-                    applyFilters();
-                    updateStats();
-                    updateCharts();
-                    
-                    snapshot.docChanges().forEach((change) => {
-                        if (change.type === 'added') {
-                            playNotificationSound();
-                        }
-                    });
-                }, (error) => {
-                    console.error('Error:', error);
-                    document.getElementById('alertsContainer').innerHTML = `
-                        <div class="p-8 text-center text-red-500">
-                            <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                            <p>Error connecting to database. Please refresh.</p>
-                        </div>
-                    `;
-                });
+        function updateHourlyChart(todaySales) {
+            const ctx = document.getElementById('hourlyChart');
+            if (!ctx) return;
+            
+            // Group by hour
+            const hourlyData = new Array(24).fill(0);
+            todaySales.forEach(sale => {
+                const hour = new Date(sale.timestamp).getHours();
+                hourlyData[hour] += sale.total;
+            });
+            
+            // Show only hours with data + surrounding hours
+            const currentHour = new Date().getHours();
+            const labels = [];
+            const data = [];
+            for (let i = 6; i <= currentHour + 1; i++) {
+                if (i >= 0 && i < 24) {
+                    labels.push(i + ':00');
+                    data.push(hourlyData[i]);
+                }
+            }
+            
+            if (hourlyChart) {
+                hourlyChart.destroy();
+            }
+            
+            hourlyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Revenue (₹)',
+                        data: data,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
         }
 
-        function renderAlerts(feedbacks) {
-            const container = document.getElementById('alertsContainer');
+        function updateStaffTable(todaySales) {
+            const tbody = document.getElementById('staffTableBody');
             
-            if (feedbacks.length === 0) {
-                container.innerHTML = `
-                    <div class="p-8 text-center text-slate-400">
-                        <i class="fas fa-inbox text-4xl mb-2"></i>
-                        <p>No feedback received yet.</p>
-                    </div>
-                `;
+            // Group by staff
+            const staffStats = {};
+            todaySales.forEach(sale => {
+                if (!staffStats[sale.staffId]) {
+                    staffStats[sale.staffId] = {
+                        staffId: sale.staffId,
+                        trainNumber: sale.trainNumber,
+                        count: 0,
+                        revenue: 0
+                    };
+                }
+                staffStats[sale.staffId].count++;
+                staffStats[sale.staffId].revenue += sale.total;
+            });
+            
+            const staffList = Object.values(staffStats).sort((a, b) => b.revenue - a.revenue);
+            
+            if (staffList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">No sales data yet</td></tr>';
                 return;
             }
-
-            container.innerHTML = feedbacks.map(fb => createAlertCard(fb)).join('');
+            
+            tbody.innerHTML = staffList.map(staff => {
+                const avgOrder = Math.round(staff.revenue / staff.count);
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-medium text-slate-800">${staff.staffId}</td>
+                        <td class="px-4 py-3 text-slate-600">${staff.trainNumber}</td>
+                        <td class="px-4 py-3 text-right font-bold">${staff.count}</td>
+                        <td class="px-4 py-3 text-right font-bold text-green-600">₹${staff.revenue.toLocaleString('en-IN')}</td>
+                        <td class="px-4 py-3 text-right text-slate-600">₹${avgOrder}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">Active</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
-        function createAlertCard(fb) {
-            const isUrgent = fb.rating <= 2 || fb.issueType === 'overcharging';
-            const isPositive = fb.rating >= 4;
-            const borderColor = isUrgent ? 'border-red-500' : isPositive ? 'border-green-500' : 'border-yellow-500';
-            const bgColor = isUrgent ? 'bg-red-50' : isPositive ? 'bg-green-50' : 'bg-yellow-50';
-            const badgeColor = isUrgent ? 'bg-red-200 text-red-800' : isPositive ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800';
-            const badgeText = isUrgent ? 'URGENT' : isPositive ? 'POSITIVE' : 'MEDIUM';
-            
-            const issueLabels = {
-                'overcharging': 'Overcharging', 'service': 'Service Issue',
-                'food-quality': 'Food Quality', 'availability': 'Not Available',
-                'bill': 'No Bill', 'staff-behavior': 'Staff Behavior',
-                'appreciation': 'Appreciation', 'other': 'Other'
-            };
-
-            const time = fb.timestamp ? fb.timestamp.toDate().toLocaleTimeString() : 'Just now';
-            const resolvedClass = fb.status === 'resolved' ? 'opacity-60' : '';
-            const resolvedBadge = fb.status === 'resolved' ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">RESOLVED</span>' : '';
-            
-            const managerResponse = fb.managerResponse ? `
-                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p class="text-xs text-blue-600 font-semibold mb-1"><i class="fas fa-reply mr-1"></i>Manager Response:</p>
-                    <p class="text-sm text-blue-800">${fb.managerResponse}</p>
-                </div>
-            ` : '';
-
-            return `
-                <div class="alert-card p-4 border-l-4 ${borderColor} ${bgColor} ${resolvedClass} hover:shadow-md transition" id="alert-${fb.id}">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2 py-1 rounded text-xs font-bold ${badgeColor}">${badgeText}</span>
-                            ${resolvedBadge}
-                            <span class="text-xs text-slate-500">${time}</span>
-                        </div>
-                        <div class="flex text-yellow-400 text-sm">
-                            ${'★'.repeat(fb.rating)}${'☆'.repeat(5-fb.rating)}
-                        </div>
-                    </div>
-                    <p class="text-sm font-bold text-slate-800 mb-1">${issueLabels[fb.issueType] || fb.issueType}</p>
-                    <p class="text-sm text-slate-600 mb-2">${fb.description}</p>
-                    ${managerResponse}
-                    <div class="flex items-center justify-between mt-3">
-                        <div>
-                            <span class="text-xs font-medium text-slate-600">Coach ${fb.coach} • Seat ${fb.seat}</span>
-                            ${fb.trainNumber ? `<span class="text-xs font-bold text-blue-600 ml-2">Train ${fb.trainNumber}</span>` : ''}
-                        </div>
-                        ${fb.status !== 'resolved' ? `
-                            <div class="space-x-2">
-                                <button onclick="openResponseModal('${fb.id}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition font-medium">Respond</button>
-                                <button onclick="quickResolve('${fb.id}')" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition font-medium">Resolve</button>
-                            </div>
-                        ` : ''}
-                    </div>
-                    ${fb.photo ? `<img src="${fb.photo}" class="mt-3 w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition border border-slate-200" onclick="window.open('${fb.photo}')">` : ''}
-                </div>
-            `;
-        }
-
-        function applyFilters() {
+        function filterSales() {
             const trainFilter = document.getElementById('trainFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
-            
-            let filtered = allFeedbacks;
+            loadAllSales();
             
             if (trainFilter !== 'all') {
-                filtered = filtered.filter(f => f.trainNumber === trainFilter);
+                const container = document.getElementById('salesContainer');
+                const allCards = container.querySelectorAll('.sale-card');
+                allCards.forEach(card => {
+                    if (card.textContent.includes('Train ' + trainFilter)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
             }
-            if (statusFilter !== 'all') {
-                filtered = filtered.filter(f => f.status === statusFilter);
-            }
-            
-            renderAlerts(filtered);
         }
 
-        function updateStats() {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        function refreshSales() {
+            loadAllSales();
+        }
+
+        // ==================== FEEDBACK FUNCTIONS (Original) ====================
+
+        function initCharts() {
+            // Issues Chart
+            const ctx = document.getElementById('issuesChart');
+            if (ctx) {
+                issuesChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Overcharging', 'Service', 'Food Quality', 'Others'],
+                        datasets: [{
+                            data: [0, 0, 0, 0],
+                            backgroundColor: ['#ef4444', '#f97316', '#eab308', '#6b7280'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+                    }
+                });
+            }
+        }
+
+        function checkNewFeedback() {
+            const newFeedback = localStorage.getItem('newFeedback');
+            if (newFeedback) {
+                const data = JSON.parse(newFeedback);
+                addAlert(data);
+                localStorage.removeItem('newFeedback');
+                updateFeedbackStats();
+                playNotificationSound();
+            }
+        }
+
+        function loadAllFeedback() {
+            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            const today = new Date().toDateString();
+            const todayFeedbacks = feedbacks.filter(f => new Date(f.timestamp).toDateString() === today);
             
-            const todayFeedbacks = allFeedbacks.filter(f => {
-                if (!f.timestamp) return false;
-                const fbDate = f.timestamp.toDate();
-                return fbDate >= today;
-            });
+            todayFeedbacks.reverse().forEach(f => addAlert(f, false));
+            updateFeedbackStats();
+        }
+
+        function addAlert(data, animate = true) {
+            const alertsContainer = document.getElementById('alertsContainer');
+            
+            if (alertsContainer.children.length === 1 && alertsContainer.children[0].querySelector('.fa-inbox')) {
+                alertsContainer.innerHTML = '';
+            }
+
+            const alertId = Date.now();
+            const isUrgent = data.rating <= 2 || data.issueType === 'overcharging';
+            const isPositive = data.rating >= 4;
+            
+            const alertCard = document.createElement('div');
+            alertCard.className = `alert-card p-4 border-l-4 ${isUrgent ? 'border-red-500 bg-red-50' : isPositive ? 'border-green-500 bg-green-50' : 'border-yellow-500 bg-yellow-50'} ${animate ? 'pulse-ring' : ''}`;
+            alertCard.id = `alert-${alertId}`;
+            
+            const issueLabels = {
+                'overcharging': 'Overcharging',
+                'service': 'Service Issue',
+                'food-quality': 'Food Quality',
+                'availability': 'Not Available',
+                'bill': 'No Bill',
+                'staff-behavior': 'Staff Behavior',
+                'appreciation': 'Appreciation',
+                'other': 'Other'
+            };
+
+            alertCard.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 rounded text-xs font-bold ${isUrgent ? 'bg-red-200 text-red-800' : isPositive ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}">
+                            ${isUrgent ? 'URGENT' : isPositive ? 'POSITIVE' : 'MEDIUM'}
+                        </span>
+                        <span class="text-xs text-slate-500">${new Date(data.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="flex text-yellow-400 text-sm">
+                        ${'★'.repeat(data.rating)}${'☆'.repeat(5-data.rating)}
+                    </div>
+                </div>
+                <p class="text-sm font-medium text-slate-800 mb-1">${issueLabels[data.issueType] || data.issueType}</p>
+                <p class="text-sm text-slate-600 mb-2">${data.description}</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-500">Coach ${data.coach} • Seat ${data.seat}</span>
+                    <div class="space-x-2">
+                        <button onclick="openResponseModal(${alertId})" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Respond</button>
+                        <button onclick="resolveAlert(${alertId})" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Resolve</button>
+                    </div>
+                </div>
+                ${data.photo ? `<img src="${data.photo}" class="mt-2 w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition" onclick="window.open('${data.photo}')">` : ''}
+            `;
+            
+            alertsContainer.insertBefore(alertCard, alertsContainer.firstChild);
+            alerts.push({ id: alertId, data: data, element: alertCard });
+            
+            const badge = document.getElementById('notificationBadge');
+            badge.textContent = alerts.filter(a => !a.resolved).length;
+            badge.classList.remove('hidden');
+        }
+
+        function updateFeedbackStats() {
+            const today = new Date().toDateString();
+            const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            const todayFeedbacks = feedbacks.filter(f => new Date(f.timestamp).toDateString() === today);
             
             document.getElementById('totalFeedback').textContent = todayFeedbacks.length;
             
@@ -436,190 +808,111 @@
                 ? (todayFeedbacks.reduce((sum, f) => sum + f.rating, 0) / todayFeedbacks.length).toFixed(1)
                 : '0.0';
             document.getElementById('avgRating').textContent = avg;
-
-            const resolved = todayFeedbacks.filter(f => f.status === 'resolved').length;
-            const rate = todayFeedbacks.length > 0 ? Math.round((resolved / todayFeedbacks.length) * 100) : 0;
-            document.getElementById('resolutionPercent').textContent = rate + '%';
-            document.getElementById('resolutionBar').style.width = rate + '%';
-            document.getElementById('resolutionLabel').textContent = rate > 80 ? 'Excellent' : rate > 60 ? 'Good' : 'Needs Improvement';
-
-            const badge = document.getElementById('notificationBadge');
-            if (pending > 0) {
-                badge.textContent = pending;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
-        function updateCharts() {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
-            const todayFeedbacks = allFeedbacks.filter(f => {
-                if (!f.timestamp) return false;
-                return f.timestamp.toDate() >= today;
-            });
-            
-            // Update issues chart - FIXED
-            const categories = ['overcharging', 'service', 'food-quality', 'bill', 'other'];
+            // Update chart
+            const categories = ['overcharging', 'service', 'food-quality', 'other'];
             const counts = categories.map(cat => todayFeedbacks.filter(f => f.issueType === cat).length);
             
             if (issuesChart) {
                 issuesChart.data.datasets[0].data = counts;
                 issuesChart.update();
             }
-
-            // Update hourly chart - FIXED
-            const hours = Array(10).fill(0);
-            todayFeedbacks.forEach(f => {
-                if (f.timestamp) {
-                    const hour = f.timestamp.toDate().getHours();
-                    if (hour >= 6 && hour <= 23) {
-                        const slot = Math.floor((hour - 6) / 2);
-                        if (slot >= 0 && slot < 10) hours[slot]++;
-                    }
-                }
-            });
-            
-            if (hourlyChart) {
-                hourlyChart.data.datasets[0].data = hours;
-                hourlyChart.update();
-            }
         }
 
         function filterAlerts(type) {
             const container = document.getElementById('alertsContainer');
-            const cards = container.querySelectorAll('.alert-card');
+            const allAlerts = container.querySelectorAll('.alert-card');
             
-            cards.forEach(card => {
-                const isUrgent = card.classList.contains('border-red-500');
-                const isPositive = card.classList.contains('border-green-500');
+            allAlerts.forEach(alert => {
+                const isUrgent = alert.classList.contains('border-red-500');
+                const isPositive = alert.classList.contains('border-green-500');
                 
-                if (type === 'all') card.style.display = 'block';
-                else if (type === 'urgent' && isUrgent) card.style.display = 'block';
-                else if (type === 'positive' && isPositive) card.style.display = 'block';
-                else card.style.display = 'none';
+                if (type === 'all') {
+                    alert.style.display = 'block';
+                } else if (type === 'urgent' && isUrgent) {
+                    alert.style.display = 'block';
+                } else if (type === 'positive' && isPositive) {
+                    alert.style.display = 'block';
+                } else {
+                    alert.style.display = 'none';
+                }
             });
         }
 
-        function openResponseModal(docId) {
-            currentDocId = docId;
-            const fb = allFeedbacks.find(f => f.id === docId);
-            document.getElementById('modalIssueText').textContent = fb.description;
-            document.getElementById('modalContactInfo').textContent = fb.customerPhone ? `Contact: ${fb.customerPhone}` : 'No contact provided';
+        function openResponseModal(alertId) {
+            currentAlertId = alertId;
+            const alert = alerts.find(a => a.id === alertId);
+            document.getElementById('modalIssueText').textContent = alert.data.description;
             document.getElementById('responseModal').classList.remove('hidden');
         }
 
         function closeModal() {
             document.getElementById('responseModal').classList.add('hidden');
-            currentDocId = null;
+            currentAlertId = null;
         }
 
         function sendResponse() {
-            if (!currentDocId) return;
-            
             const response = document.getElementById('responseText').value;
-            
-            db.collection('feedbacks').doc(currentDocId).update({
-                status: 'resolved',
-                managerResponse: response,
-                resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                closeModal();
-                document.getElementById('responseText').value = '';
-            });
-        }
-
-        function quickResolve(docId) {
-            if (confirm('Mark this issue as resolved?')) {
-                db.collection('feedbacks').doc(docId).update({
-                    status: 'resolved',
-                    resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+            if (!response.trim()) {
+                alert('Please enter a response');
+                return;
             }
+            alert('Response recorded: ' + response);
+            resolveAlert(currentAlertId);
+            closeModal();
         }
 
-        function refreshData() {
-            const icon = document.getElementById('refreshIcon');
-            icon.classList.add('fa-spin');
-            setTimeout(() => icon.classList.remove('fa-spin'), 1000);
-        }
-
-        // FIXED CSV Export with Reference ID and Manager Response
-        function exportData() {
-            const headers = ['Date', 'Time', 'Reference ID', 'Train', 'Coach', 'Seat', 'Rating', 'Issue Type', 'Description', 'Customer Phone', 'Status', 'Manager Response', 'Resolved At'];
-            
-            const rows = allFeedbacks.map(f => {
-                const date = f.timestamp ? f.timestamp.toDate() : new Date();
-                const dateStr = date.toLocaleDateString('en-IN');
-                const timeStr = date.toLocaleTimeString('en-IN');
-                const resolvedAt = f.resolvedAt ? f.resolvedAt.toDate().toLocaleString('en-IN') : '';
-                const refId = '#' + f.id.slice(-8).toUpperCase();
+        function resolveAlert(alertId) {
+            const alert = alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.resolved = true;
+                alert.element.style.opacity = '0.5';
+                const btn = alert.element.querySelector('button[onclick^="resolveAlert"]');
+                if (btn) {
+                    btn.textContent = 'Resolved';
+                    btn.disabled = true;
+                    btn.classList.add('bg-gray-400');
+                }
                 
-                return [
-                    dateStr,
-                    timeStr,
-                    refId,
-                    f.trainNumber || 'N/A',
-                    f.coach || 'N/A',
-                    f.seat || 'N/A',
-                    f.rating,
-                    f.issueType,
-                    `"${(f.description || '').replace(/"/g, '""')}"`,
-                    f.customerPhone || 'N/A',
-                    f.status,
-                    `"${(f.managerResponse || 'No response').replace(/"/g, '""')}"`,
-                    resolvedAt
-                ].join(',');
-            });
-
-            const csv = [headers.join(','), ...rows].join('\n');
-            
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `RK-Feedback-Export-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+                const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+                const fb = feedbacks.find(f => f.timestamp === alert.data.timestamp);
+                if (fb) {
+                    fb.status = 'resolved';
+                    localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+                }
+                
+                updateFeedbackStats();
+            }
         }
 
         function playNotificationSound() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.5);
-            } catch(e) { console.log('Audio not supported'); }
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
         }
 
-        function checkConnection() {
-            const status = document.getElementById('connectionStatus');
-            if (navigator.onLine) {
-                status.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>Live Sync';
-                status.className = 'status-live text-sm font-medium text-green-600 flex items-center';
-            } else {
-                status.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span>Offline';
-                status.className = 'text-sm font-medium text-red-600 flex items-center';
-            }
-        }
-        
-        window.addEventListener('online', checkConnection);
-        window.addEventListener('offline', checkConnection);
+        // Cleanup old data
+        window.addEventListener('load', () => {
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            
+            ['feedbacks', 'sales', 'smsLog', 'completedSales'].forEach(key => {
+                let data = JSON.parse(localStorage.getItem(key) || '[]');
+                data = data.filter(item => new Date(item.timestamp) > weekAgo);
+                localStorage.setItem(key, JSON.stringify(data));
+            });
+        });
     </script>
 </body>
 </html>
